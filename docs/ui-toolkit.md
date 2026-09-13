@@ -245,7 +245,7 @@ application data and can be passed to custom functions too.
 ## Themes
 
 ```text
-zdraw-ui-theme dark|light [16|256|mono] [role=color ...]
+zdraw-ui-theme dark|light [auto|rgb|16|256|mono] [role=color ...]
 ```
 
 Declare a writable association named `zdraw_ui_theme` in the calling scope.
@@ -255,6 +255,8 @@ supplied profile wins over `NO_COLOR`. Supply the profile before role overrides.
 
 | Profile | Default palette |
 | --- | --- |
+| `auto` | Rich dark/light palette, adapted to initialized RGB/256/basic/monochrome capabilities; respects `NO_COLOR`. |
+| `rgb` | The same rich palette, requiring initialized native RGB support. |
 | `16` | Basic indexed colors 0–7, using the terminal's palette. |
 | `256` | Neutral surfaces and a teal/blue accent from the indexed palette. |
 | `mono` | Default foreground/background, with selection using reverse video. |
@@ -272,7 +274,15 @@ zdraw-ui-theme dark 256 accent=81 border=243
 zdraw-ui-theme light 256 accent=25
 ```
 
-Colors accept `default`, decimal indexes 0–255 or `#RRGGBB`. The resolver
+For easier palette authoring, call `zdraw-ui-theme dark auto` after `zdraw init`.
+Hex theme overrides and literal style colors then adapt to the selected output.
+See [Colors without palette arithmetic](colors.md) for standalone color
+resolution, gradients, ownership, numeric-index encoding and precision limits.
+Both new profiles may enable the existing RGB interface and record their
+capability snapshot in the theme. The actual profile is reported in `profile`.
+
+Colors accept `default`, decimal indexes 0–255 or `#RRGGBB`. With the original
+`16`, `256`, and `mono` profiles, the resolver
 canonicalizes indexed values and hex spelling but does not initialize native
 color support, query the terminal background or map unavailable colors. The
 application chooses a supported profile using `zdraw colorinfo`; the gallery

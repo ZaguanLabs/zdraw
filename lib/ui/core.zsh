@@ -2,6 +2,12 @@
 # Zsh licence: ../../LICENCE
 # Internal helpers reserve _zui_* locals. Public results use documented,
 # caller-owned parameters through Zsh dynamic scope. No strings are evaluated.
+() {
+  builtin emulate -L zsh
+  builtin setopt no_aliases
+  builtin source "${1:A:h}/color.zsh"
+} "${(%):-%x}" || return
+
 # Diagnostics are opt-in and never open a file or take ownership of a descriptor.
 # Only the failure path pays for formatting; a broken sink cannot change status.
 function _zdraw_ui_error {
@@ -32,7 +38,8 @@ function zdraw-ui-theme {
   emulate -L zsh
   [[ ${(t)zdraw_ui_theme} == (association|association-local) && $# -ge 1 ]] || { _zdraw_ui_error 1 "${(%):-%N}" "requires a writable zdraw_ui_theme association and a theme name"; return $?; }
   local _zui_name=$1 _zui_profile=${2:-${NO_COLOR:+mono}} _zui_pair _zui_key _zui_value
-  local -A _zui_theme
+  local -A _zui_theme zdraw_color
+  local REPLY
   _zui_profile=${_zui_profile:-16}
   case $_zui_name in
     dark) _zui_theme=(canvas 0 surface 0 text 7 muted 6 accent 6 border 4
@@ -51,9 +58,19 @@ function zdraw-ui-theme {
         _zui_theme=(canvas 255 surface 231 text 235 muted 242 accent 24 border 250
                     selection 24 on-selection 231 inactive 253 on-inactive 235 error 124)
       fi ;;
+    auto|rgb)
+      if [[ $_zui_name == dark ]]; then
+        _zui_theme=(canvas '#121820' surface '#1c2632' text '#e1eaf3' muted '#95a6b8'
+          accent '#5edac8' border '#40546b' selection '#255e72' on-selection '#f2fbff'
+          inactive '#283747' on-inactive '#acbac9' error '#ff8796')
+      else
+        _zui_theme=(canvas '#edf2f7' surface '#ffffff' text '#223044' muted '#52677c'
+          accent '#086e80' border '#a6b8c8' selection '#145f80' on-selection '#ffffff'
+          inactive '#dce5ed' on-inactive '#3e5369' error '#b62948')
+      fi ;;
     mono)
       for _zui_key in "${(@k)_zui_theme}"; do _zui_theme[$_zui_key]=default; done ;;
-    *) { _zdraw_ui_error 1 "${(%):-%N}" "unknown color profile ${(qqq)_zui_profile}; expected 16, 256 or mono"; return $?; } ;;
+    *) { _zdraw_ui_error 1 "${(%):-%N}" "unknown color profile ${(qqq)_zui_profile}; expected auto, rgb, 16, 256 or mono"; return $?; } ;;
   esac
   shift
   (( $# )) && shift
@@ -70,6 +87,17 @@ function zdraw-ui-theme {
     [[ $_zui_value == <-> ]] && _zui_value=$(( 10#$_zui_value ))
     _zui_theme[$_zui_key]=${(L)_zui_value}
   done
+  if [[ $_zui_profile == (auto|rgb) ]]; then
+    zdraw-color-setup "$_zui_profile" || { _zdraw_ui_error $? "${(%):-%N}" 'color setup requires an initialized, supported session'; return $?; }
+    for _zui_key in "${(@k)_zui_theme}"; do
+      zdraw-color "$_zui_theme[$_zui_key]" || return
+      _zui_theme[$_zui_key]=$REPLY
+    done
+    _zui_profile=$zdraw_color[profile]
+    _zui_theme[color-profile]=$zdraw_color[profile]
+    _zui_theme[color-encoding]=$zdraw_color[encoding]
+    _zui_theme[rgb-min]=$zdraw_color[rgb_min]
+  fi
   _zui_theme[name]=$_zui_name _zui_theme[profile]=$_zui_profile
   zdraw_ui_theme=("${(@kv)_zui_theme}")
 }
@@ -92,7 +120,14 @@ function _zdraw_ui_property {
       esac
       _zdraw_ui_color "$_zui_value" || { _zdraw_ui_error 1 "${(%):-%N}" "invalid color ${(qqq)_zui_value} in ${(qqq)1}"; return $?; }
       [[ $_zui_value == <-> ]] && _zui_value=$(( 10#$_zui_value ))
-      _zui_value=${(L)_zui_value} ;;
+      _zui_value=${(L)_zui_value}
+      if [[ ${(t)zdraw_ui_theme} == association* && -n ${zdraw_ui_theme[color-profile]-} ]]; then
+        local -A zdraw_color=(profile "$zdraw_ui_theme[color-profile]"
+          encoding "${zdraw_ui_theme[color-encoding]-}" rgb_min "${zdraw_ui_theme[rgb-min]-}")
+        local REPLY
+        zdraw-color "$_zui_value" || return
+        _zui_value=$REPLY
+      fi ;;
     px|py)
       [[ $_zui_value == <-> && ${#_zui_value} -le 2 ]] || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be an integer from 0 to 16, got ${(qqq)1}"; return $?; }
       (( 10#$_zui_value <= 16 )) || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be from 0 to 16, got ${(qqq)1}"; return $?; }

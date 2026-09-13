@@ -21,7 +21,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def capture(output, example='design-study'):
+def capture(output, example='design-study', terminal='xterm-256color'):
     for program in ('Xvfb', 'xterm', 'xwininfo', 'import'):
         if not shutil.which(program):
             raise RuntimeError(f'{program} is required for optional graphical captures')
@@ -32,13 +32,17 @@ def capture(output, example='design-study'):
                    module_sha256=hashlib.sha256((ROOT / '.build/modules/zdraw.so').read_bytes()).hexdigest(),
                    xterm=subprocess.check_output(['xterm', '-version'], text=True).strip(),
                    shell=subprocess.check_output([str(ROOT / '.build/zsh/Src/zsh'), '--version'], text=True).strip(),
-                   font='DejaVu Sans Mono 11', locale='C.UTF-8', term='xterm-256color', scenarios=[])
+                   font='DejaVu Sans Mono 11', locale='C.UTF-8', term=terminal, scenarios=[])
     if example in ('linked-detail', 'change-gutter', 'status-strip'):
         records['component_sha256'] = hashlib.sha256((ROOT / f'examples/components/{example}.zsh').read_bytes()).hexdigest()
     if example == 'review-composition':
         records['components_sha256'] = {
             name: hashlib.sha256((ROOT / f'examples/components/{name}.zsh').read_bytes()).hexdigest()
             for name in ('linked-detail', 'change-gutter', 'status-strip')}
+    if example == 'color-studio':
+        records['helpers_sha256'] = {
+            name: hashlib.sha256((ROOT / f'lib/ui/{name}.zsh').read_bytes()).hexdigest()
+            for name in ('core', 'color')}
     rr, rw = os.pipe()
     server = subprocess.Popen(['Xvfb', '-displayfd', str(rw), '-screen', '0', '1600x1000x24', '-nolisten', 'tcp'],
                               pass_fds=(rw,), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -109,17 +113,26 @@ def capture(output, example='design-study'):
                 ('variant', 'dark', 'ready', '100x24', 'list', 'auto'),
                 ('empty', 'dark', 'empty', '100x24', 'list', 'auto'),
             ]
+        if example == 'color-studio':
+            scenarios = [
+                ('dark', 'dark', 'ready', '100x24', 'list', 'auto'),
+                ('light', 'light', 'ready', '100x24', 'list', 'auto'),
+                ('narrow', 'dark', 'ready', '28x10', 'list', 'auto'),
+                ('mono', 'dark', 'ready', '80x24', 'list', 'mono'),
+            ]
         with tempfile.TemporaryDirectory(prefix='study-capture-', dir=ROOT / '.build') as temporary:
             for name, design, state, geometry, focus, profile in scenarios:
                 directory = Path(temporary) / name
                 directory.mkdir()
                 os.mkfifo(directory / 'continue')
-                command = ['xterm', '-display', display, '-title', 'zdraw-study', '-tn', 'xterm-256color',
+                command = ['xterm', '-display', display, '-title', 'zdraw-study', '-tn', terminal,
                            '-geometry', geometry + '+0+0', '+sb', '-fa', 'DejaVu Sans Mono', '-fs', '11',
                            '-xrm', 'XTerm*cursorBlink: false', '-xrm', 'XTerm*cursorUnderLine: true',
                            '-e', str(ROOT / '.build/zsh/Src/zsh'), '-df',
                            str(ROOT / 'scripts/design-study-frame.zsh'), str(directory), focus]
-                if example in ('linked-detail', 'change-gutter', 'status-strip', 'review-composition'):
+                if example == 'color-studio':
+                    command += ['--example', example, '--theme', design, '--profile', profile]
+                elif example in ('linked-detail', 'change-gutter', 'status-strip', 'review-composition'):
                     command += ['--example', example, '--theme', design, '--profile', profile]
                     if example == 'review-composition' and name in ('keys', 'keys-narrow'):
                         command += ['--keys']
@@ -137,7 +150,7 @@ def capture(output, example='design-study'):
                         command += ['--empty']
                 else:
                     command += ['--design', design, '--state', state, '--profile', profile]
-                if profile in ('mono', '16') and example != 'status-strip':
+                if profile in ('mono', '16') and example not in ('status-strip', 'color-studio'):
                     command.append('--ascii')
                 process = subprocess.Popen(command, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
                 try:
@@ -185,6 +198,7 @@ def capture(output, example='design-study'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--example', choices=('design-study', 'linked-detail', 'change-gutter', 'status-strip', 'review-composition'), default='design-study')
+    parser.add_argument('--term', choices=('xterm-256color', 'xterm-direct'), default='xterm-256color')
+    parser.add_argument('--example', choices=('design-study', 'linked-detail', 'change-gutter', 'status-strip', 'review-composition', 'color-studio'), default='design-study')
     args = parser.parse_args()
-    capture(args.output.resolve(), args.example)
+    capture(args.output.resolve(), args.example, args.term)

@@ -559,6 +559,10 @@ Run the headless example using the matching staged shell:
 
 ## Truecolor
 
+For automatic palette selection, hex-to-indexed fallback and reusable ramps,
+see the optional [Zsh color companion](colors.md). The strict native interface
+below retains its existing opt-in and rejection behavior.
+
 Start the **matching built shell** with a direct-color terminal description that
 is appropriate for the actual terminal. For an xterm-compatible terminal that
 supports the entry's RGB sequences, and with `xterm-direct` installed:

@@ -3,7 +3,7 @@
 emulate -R zsh
 typeset report_fd=$1 control_fd=$2 capture_dir=${3:-}
 typeset example=${4:-gallery}
-[[ $example == (gallery|list-detail|table-inspector|task-monitor) ]] || exit 1
+[[ $example == (gallery|list-detail|table-inspector|task-monitor|color-studio) ]] || exit 1
 typeset -i test_ui_frame_number=0
 function zdraw {
   builtin zdraw "$@" || return
@@ -79,7 +79,9 @@ function zdraw {
           done
         } > "$capture_dir/$example-$test_ui_frame_number.cells"
       fi
-      if [[ $example == task-monitor ]]; then
+      if [[ $example == color-studio ]]; then
+        print -r -u "$report_fd" -- "colors $rows $columns $theme_name $profile"
+      elif [[ $example == task-monitor ]]; then
         print -r -u "$report_fd" -- "monitor $rows $columns $tab $paused $tick $completed $zdraw_ui_table[selected] $theme_name $chart_palette $profile ${#chart_history} $chart_history[-1]"
       elif [[ $example == gallery ]]; then
         print -r -u "$report_fd" -- "frame $rows $columns $theme_name $profile $border_index $compact $empty $narrow $list_focus ${zdraw_ui_list[selected]:-0}"

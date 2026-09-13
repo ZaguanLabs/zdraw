@@ -43,6 +43,9 @@ class UITests(unittest.TestCase):
     def test_gallery_interaction_and_resize(self):
         self.interactive_example('gallery')
 
+    def test_color_studio_interaction_and_resize(self):
+        self.interactive_example('color-studio')
+
     def test_list_detail_recipe(self):
         self.interactive_example('list-detail')
 
@@ -110,6 +113,20 @@ class UITests(unittest.TestCase):
         try:
             self.assertEqual(report(), ['baseline'])
             original = termios.tcgetattr(terminal)
+            if example == 'color-studio':
+                self.assertEqual(advance(), 'colors 24 100 dark 256'.split())
+                self.assertEqual(advance(b't'), 'colors 24 100 light 256'.split())
+                self.assertEqual(advance(b'm')[-1], 'mono')
+                self.assertEqual(advance(size=(10, 28))[1:3], ['10', '28'])
+                self.assertEqual(advance(size=(4, 12))[1:3], ['4', '12'])
+                self.assertEqual(advance(b'm')[-1], '256')
+                self.assertEqual(advance(size=(24, 100))[1:3], ['24', '100'])
+                self.assertEqual(advance(b'q'), ['done'])
+                _, status = os.waitpid(pid, 0)
+                reaped = True
+                self.assertEqual(os.waitstatus_to_exitcode(status), 0, bytes(screen[-4000:]))
+                self.assertEqual(termios.tcgetattr(terminal), original)
+                return
             if example == 'task-monitor':
                 self.assertEqual(advance(), 'monitor 24 100 1 0 0 0 1 dark auto 256 1 0'.split())
                 if options:

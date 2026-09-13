@@ -84,6 +84,9 @@ test: build
 	"$(ZSH_BIN)" -dfn examples/wrapping.zsh
 	"$(ZSH_BIN)" -dfn examples/borders.zsh
 	"$(ZSH_BIN)" -dfn examples/colors.zsh
+	"$(ZSH_BIN)" -dfn lib/zdraw-color.zsh
+	"$(ZSH_BIN)" -dfn tests/color-helpers.zsh
+	"$(ZSH_BIN)" -dfn examples/color-studio.zsh
 	"$(ZSH_BIN)" -dfn examples/cell-inspection.zsh
 	"$(ZSH_BIN)" -dfn examples/snapshot-diff.zsh
 	"$(ZSH_BIN)" -dfn examples/regions.zsh

@@ -6,7 +6,7 @@ shift 2
 typeset capture_example=design-study
 if [[ ${1-} == --example ]]; then
   capture_example=$2
-  [[ $capture_example == (design-study|linked-detail|change-gutter|status-strip|review-composition) ]] || exit 1
+  [[ $capture_example == (design-study|linked-detail|change-gutter|status-strip|review-composition|color-studio) ]] || exit 1
   shift 2
 fi
 typeset -i capture_finished=0

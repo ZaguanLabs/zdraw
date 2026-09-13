@@ -68,6 +68,15 @@ The gallery shows theme, border and state variations. The list/detail and
 inspector recipes demonstrate responsive panes, selection and scrolling. The
 form demonstrates editing and validation.
 
+For broader colors, use `zdraw-ui-theme dark auto` after initialization. Author
+theme and instance colors as `#RRGGBB`; the helper selects RGB when supported
+or converts to the available palette. The standalone color companion also
+supplies reusable gradients. See [the color guide](docs/colors.md), or try:
+
+```sh
+.build/zsh/Src/zsh -df examples/color-studio.zsh
+```
+
 For a small first program, save this as `hello.zsh` in the repository root and
 run `.build/zsh/Src/zsh -df hello.zsh`:
 
