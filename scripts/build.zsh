@@ -42,7 +42,7 @@ fi
   print -u2 -r -- 'Build cache belongs to another source tree; run make clean and retry.'
   exit 1
 }
-cp "$project_root"/Src/Modules/{zdraw.c,zdraw.mdd,zdraw_keys.awk,zdraw_grapheme.h,zdraw_grapheme_data.h} "$build_root/Src/Modules/"
+cp "$project_root"/Src/Modules/{zdraw.c,zdraw.mdd,zdraw_keys.awk,zdraw_grapheme.h,zdraw_grapheme_data.h,zdraw_raster.h} "$build_root/Src/Modules/"
 cp "$project_root/Doc/Zsh/mod_zdraw.yo" "$build_root/Doc/Zsh/"
 # Add optional drawing checks and register the manual in Zsh's build machinery.
 # Only the disposable working copy is patched, including for configured inputs.
@@ -89,7 +89,7 @@ mkdir -p "$project_root/.build/modules"
 cp "$build_root/Src/Modules/zdraw.$module_extension" "$project_root/.build/modules/"
 mkdir -p "$project_root/.build/modules/zsh"
 typeset helper
-for helper in zselect system parameter zutil; do
+for helper in zselect system parameter zutil mathfunc; do
   if [[ -f $build_root/Src/Modules/$helper.$module_extension ]]; then
     cp "$build_root/Src/Modules/$helper.$module_extension" "$project_root/.build/modules/zsh/"
   fi

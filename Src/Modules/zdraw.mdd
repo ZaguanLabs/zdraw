@@ -7,7 +7,7 @@ autofeatures="b:zdraw"
 objects="zdraw.o"
 
 :<<\Make
-zdraw.o zdraw..o: zdraw_keys.h $(sdir)/zdraw_grapheme.h $(sdir)/zdraw_grapheme_data.h
+zdraw.o zdraw..o: zdraw_keys.h $(sdir)/zdraw_grapheme.h $(sdir)/zdraw_grapheme_data.h $(sdir)/zdraw_raster.h
 
 zdraw_keys.h: zdraw_keys.awk @CURSES_KEYS_H@
 	$(AWK) -f $(sdir)/zdraw_keys.awk @CURSES_KEYS_H@ /dev/null >zdraw_keys.h

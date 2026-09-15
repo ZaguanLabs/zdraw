@@ -4,6 +4,10 @@ The module command reference is [Doc/Zsh/mod_zdraw.yo](../Doc/Zsh/mod_zdraw.yo).
 This guide supplies examples and explanations of the extended operations.
 See [building](building.md) for setup and the [UI toolkit](ui-toolkit.md) for components.
 
+The separately authorized `zdraw raster` interface is an
+[experimental addition](raster-experiment.md), with its own bounded contract,
+reference fixtures and benchmarks. It is not a supported graphics API.
+
 ## API
 
 ### Compiled feature discovery

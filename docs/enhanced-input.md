@@ -165,3 +165,49 @@ See [real-terminal results](portability/README.md#enhanced-input-follow-up).
 
 Protocol references: [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
 and [xterm focus reporting](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html).
+
+## Held-key inspector (R3)
+
+The existing event API supplies the identities and actions needed for simultaneous
+held keys. [The standalone inspector](../examples/held-keys.zsh) demonstrates a
+bounded policy without adding state or application controls to the native module:
+
+```sh
+.build/zsh/Src/zsh -df examples/held-keys.zsh
+.build/zsh/Src/zsh -df examples/held-keys.zsh --legacy
+```
+
+The default invocation explicitly requests focus support, then keyboard support.
+It enables held state only after both operations succeed, without forcing mode
+ownership. Failed negotiation retains legacy input; late replies cannot activate
+the held-key policy. `--legacy` skips negotiation entirely. Q or Escape exits;
+Ctrl-Z suspends and restores terminal ownership before stopping the process.
+
+The example keeps at most 64 supported `key` identities in a caller-owned Zsh
+association. A press adds an identity; release removes it regardless of changed
+modifiers or associated text. Repeat never adds an identity. Focus loss, resize,
+suspend, unsupported identities and malformed keyboard packets clear the set.
+After a clear, a fresh press is required. Presses received while unfocused are
+ignored. Ordinary curses characters and arrows retain their legacy semantics
+and never acquire inferred release state.
+
+Each input cycle waits for one event, then drains at most 31 additional events
+using `poll norefresh`. The inspector redraws only after events or lifecycle
+changes, with explicit stage/present. Its 100 ms input timeout and optional 25 ms
+curses escape delay are diagnostic defaults, not a frame scheduler or a hard
+latency guarantee. Applications choose their own frame timing and apply their
+controls from the held set; terminal auto-repeat need not drive movement.
+
+Sourcing the example defines functions only. Its state belongs to the calling
+function through Zsh dynamic scope; it is an example, not a new library API.
+Session cleanup always clears the set and calls `zdraw end`, including after a
+partial packet or signal. Suspend retries a partial packet for a bounded interval
+and ends the session if it cannot release ownership.
+
+`tests/test_held_keys.py` verifies simultaneous keys, repeats, modifier changes on
+release, focus, resize, suspend/resume, malformed and partial packets, failed/late
+negotiation, resource cleanup and terminal settings using PTYs. Child exit and
+cleanup waits have deadlines, including a regression check for a child that does
+not exit. These tests establish the policy against controlled event streams;
+they do not establish a new real-terminal compatibility result. The attempted
+additional real-terminal harness was removed after a startup/cleanup hang.

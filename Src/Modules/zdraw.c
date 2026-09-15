@@ -206,6 +206,7 @@ static int zc_rgb_min = -1;
 static int zdraw_event_rows, zdraw_event_cols;
 static int zdraw_suspended;
 static int zdraw_terminal_size(int *rows, int *cols);
+static void zdraw_raster_cleanup(void);
 #if defined(NCURSES_VERSION) && defined(HAVE_DEFINE_KEY) && \
     defined(HAVE_KEY_DEFINED) && defined(HAVE_KEYBOUND)
 # define ZDRAW_PASTE 1
@@ -3020,6 +3021,7 @@ zccmd_endwin(UNUSED(const char *nam), UNUSED(char **args))
     LinkNode stdscr_win = zdraw_getwindowbyname("stdscr");
 
     zdraw_tree_collect_retired();
+    zdraw_raster_cleanup();
     if (stdscr_win) {
         zdraw_sync_reset();
 #ifdef ZDRAW_QUERIES
@@ -4190,6 +4192,8 @@ zccmd_snapshot(const char *nam, char **args)
     return !sethparam(args[1], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
 }
 
+#include "zdraw_raster.h"
+
 /* Logical counters are deliberately independent of curses allocator details.
  * Saturate totals rather than overflowing on an unbounded inherited window list. */
 static void
@@ -4254,6 +4258,9 @@ zccmd_resourceinfo(const char *nam, char **args)
     zdraw_colorinfo_value(info, "retired_tree_windows", retired);
     zdraw_colorinfo_value(info, "cached_color_pairs", zdraw_colorpairs ? zdraw_colorpairs->ct : 0);
     zdraw_colorinfo_value(info, "counter_limit", ZLONG_MAX);
+    zdraw_colorinfo_value(info, "raster_surfaces", zdraw_raster_count);
+    zdraw_colorinfo_value(info, "raster_bytes", (zlong)zdraw_raster_bytes);
+    zdraw_colorinfo_value(info, "raster_byte_limit", (zlong)ZDRAW_RASTER_BYTES);
 #if defined(ZDRAW_WIDE_SPANS) || defined(HAVE_WADDCHNSTR)
     zdraw_colorinfo_value(info, "prepared_rows", zdraw_prepared_rows ? zdraw_prepared_rows->ct : 0);
     zdraw_colorinfo_value(info, "prepared_bytes", (zlong)zdraw_prepared_bytes);
@@ -5902,6 +5909,7 @@ bin_zdraw(char *nam, char **args, UNUSED(Options ops), UNUSED(int func))
 	{"geometry", zccmd_geometry, 1, 1},
 	{"colorinfo", zccmd_colorinfo, 1, 1},
         {"resourceinfo", zccmd_resourceinfo, 1, 1},
+        {"raster", zccmd_raster, 2, -1},
 	{"textinfo", zccmd_textinfo, 2, 4},
         {"textpolicy", zccmd_textpolicy, 1, 2},
         {"textpos", zccmd_textpos, 4, 5},
@@ -6000,7 +6008,7 @@ bin_zdraw(char *nam, char **args, UNUSED(Options ops), UNUSED(int func))
 	zcsc->cmd != zccmd_textinfo && zcsc->cmd != zccmd_textpos &&
         zcsc->cmd != zccmd_textwrap && zcsc->cmd != zccmd_textpolicy &&
         zcsc->cmd != zccmd_capabilities &&
-        zcsc->cmd != zccmd_resourceinfo &&
+        zcsc->cmd != zccmd_resourceinfo && zcsc->cmd != zccmd_raster &&
 	!zdraw_getwindowbyname("stdscr")) {
 	zwarnnam(nam, "command `%s' can't be used before `zdraw init'",
 		 zcsc->name);

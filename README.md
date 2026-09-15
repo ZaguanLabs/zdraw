@@ -13,6 +13,10 @@ data, commands and event-loop policy.
 existing toolkit. Feature expansion is stopped. Images and scaled text are out
 of scope. See the [scope and quality bar](docs/scope.md).
 
+A separately authorized [R1/R2 raster experiment](docs/raster-experiment.md)
+evaluates bounded triangle filling and half-block packing. It is experimental;
+the general scope stop remains in force.
+
 ## Build and test
 
 You need Zsh, GNU Make, a C compiler, Autoconf/Autoheader, M4, Patch, curses
@@ -123,6 +127,7 @@ application that handles resize and render failures.
 | Display structured documents | [Semantic documents](docs/semantic-documents.md) |
 | Display compact data | [Charts](docs/compact-charts.md), [character canvas](docs/character-canvas.md) |
 | Handle paste, commands and asynchronous work | [Application integration](docs/application-integration.md) |
+| Track simultaneous held keys with explicit fallback and cleanup | [Held-key inspector](docs/enhanced-input.md#held-key-inspector-r3) |
 | Use native drawing and input operations | [Native API guide](docs/native-api.md), [Zsh module manual](Doc/Zsh/mod_zdraw.yo) |
 | Check terminal support | [Capabilities](docs/capabilities.md), [tested configurations](docs/portability/README.md) |
 | Verify appearance and performance | [Visual regression](docs/visual-regression.md), [benchmarks](benchmarks/README.md) |

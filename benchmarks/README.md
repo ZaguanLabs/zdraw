@@ -5,6 +5,17 @@ component improvements, exact-output comparisons, profiling evidence and
 commands for reproducing the measurements. `native.py` and `components.py`
 can alternate a baseline and the working module/libraries in the same run.
 
+## Experimental raster and cell packing
+
+`python3 benchmarks/raster.py --repetitions 5` compares the native R1/R2
+experiment with the captured Zsh scanline renderer on the same moving camera
+sweep. It reports clearing, batch submission/rasterization, packing, presentation
+and total elapsed time separately. The fixed fixture and reference backend are
+included here; no game repository or installed module is needed. See the
+[experiment contract](../docs/raster-experiment.md) for limits and interpretation.
+The [2026-09-14 results](raster-2026-09-14.md) include the measured phase timings,
+exact-output checks and supplemental live application observations.
+
 ## Styled spans
 
 Build with the public Zsh source setup in the [repository README](../README.md),

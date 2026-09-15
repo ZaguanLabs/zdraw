@@ -28,6 +28,18 @@ remain bounded ways to display data; they are not a route into image rendering.
 
 ## The hard stop
 
+### Bounded exception: R1/R2 experiment, 2026-09-14
+
+The maintainer explicitly approved proceeding with an experiment in native
+depth-tested screen-space triangles and direct half-block cell packing after
+reviewing the z3dfx roadblocks and performance assessment. This authorizes only
+the bounded experiment described in [raster-experiment.md](raster-experiment.md),
+its correctness fixtures and measurements. It does not designate a supported
+graphics API, reopen the old roadmap, authorize image protocols or scaled text,
+or waive the quality requirements below for a supported addition.
+
+### General boundary
+
 - Remove image conversion, character-mosaic previews and native image-placement
   experiments. No image renderer or image protocol is part of the supported API.
 - Cancel scaled-text work. Text uses the documented terminal-cell geometry.

@@ -34,6 +34,7 @@ xitem(tt(zdraw) tt(position) var(targetwin) var(array))
 xitem(tt(zdraw) tt(geometry) var(array))
 xitem(tt(zdraw) tt(colorinfo) var(association))
 xitem(tt(zdraw) tt(resourceinfo) var(association))
+xitem(tt(zdraw) tt(raster) var(operation) var(name) [ var(arguments) ... ])
 xitem(tt(zdraw) tt(textinfo) var(association) var(text) [ var(columns) [ var(policy) ] ])
 xitem(tt(zdraw) tt(textpos) var(association) var(text) tt(column)|tt(byte) var(offset) [ var(policy) ])
 xitem(tt(zdraw) tt(textpolicy) var(association) [ var(policy) ])
@@ -75,7 +76,8 @@ xitem(tt(zdraw) tt(restyle) var(targetwin) var(row) var(column) var(rows) var(co
 xitem(tt(zdraw) tt(fill) var(targetwin) var(row) var(column) var(rows) var(columns) var(style) var(tile))
 item(tt(zdraw) tt(resize) var(height) var(width) [ tt(endwin) | tt(nosave) | tt(endwin_nosave) ])(
 Manipulate curses windows. Except for tt(geometry), tt(colorinfo), tt(resourceinfo), tt(textinfo),
-tt(textpos), tt(textwrap) and tt(capabilities), uses of
+tt(textpos), tt(textwrap), tt(capabilities) and the headless tt(raster)
+operations described below, uses of
 this command should be
 bracketed by `tt(zdraw init)' to initialise use of curses, and
 `tt(zdraw end)' to end it; omitting `tt(zdraw end)' can cause
@@ -1608,6 +1610,69 @@ internally by tt(zdraw). This is also provided for versatility and
 should normally be not needed.
 )
 enditem()
+
+subsect(Experimental raster surfaces)
+
+The tt(raster) subcommand is a bounded R1/R2 experiment, not a supported graphics
+API. Its interface may change or be removed. Loading the module does not allocate
+raster resources. Except for tt(blit), its operations work without tt(init), a
+terminal, output or input reads. All raster operations are rejected during a
+suspended terminal session. The operations are:
+
+startsitem()
+sitem(tt(create) var(name) var(width) var(height) var(color) var(ascii) [ var(color) var(ascii) ... ])(
+Create a named surface with a palette of 1 to 32 entries. Material IDs start at
+zero. Each color is a decimal terminal index in 0 to 255; each fallback character
+is one printable ASCII byte. Names are identifiers of at most 64 bytes, without
+subscripts. Duplicate names fail. Dimensions are 1 to 512, with at most 65536
+pixels per surface. Pixels initially contain material zero and inverse depth zero.)
+sitem(tt(clear) var(name) var(material) [ var(lower_material) ])(
+Reset depths to zero and fill materials. The optional second material applies to
+rows beginning at height divided by two, rounded down.)
+sitem(tt(resize) var(name) var(width) var(height))(
+Replace the buffers with cleared buffers, preserving the palette. Failure leaves
+the old surface intact.)
+sitem(tt(triangles) var(name) [ var(x0) var(y0) var(q0) var(x1) var(y1) var(q1) var(x2) var(y2) var(q2) var(material) ... ])(
+Submit already near-clipped screen-space triangles. Coordinates are bounded by
+32768 in magnitude; positive inverse depths are at most 1000000. Numbers are
+literal decimal values, optionally signed or with an exponent, never arithmetic
+expressions. Non-finite values and invalid material IDs are rejected. A call
+accepts at most 4096 triangles and 16777216 clipped bounding-box pixel visits;
+the whole batch is validated before pixels change. Both windings are accepted.
+Sampling uses pixel centers and inclusive barycentric weights of at least
+-0.000001; absolute double areas at most 0.000001 are degenerate. Inverse depth
+is affine in screen space. Only a strictly greater computed depth replaces the
+previous material. Equal computed depths keep the earlier pixel.)
+sitem(tt(read) var(name) var(array))(
+Replace an ordinary writable indexed array with row-major alternating material
+and depth values. This diagnostic path is not intended for frame presentation.)
+sitem(tt(info) var(name) var(association))(
+Report dimensions, palette size, byte accounting and limits. The format tag is
+tt(zdraw-raster-experiment-1). Up to 32 live surfaces and 8 MiB of owned raster
+storage are permitted. Transient old and new resize buffers must fit that budget.
+Bounded per-call scratch, shell parameters and curses storage are additional.)
+sitem(tt(blit) var(name) var(window) var(row) var(column) tt(half)|tt(ascii)|tt(mono))(
+Pack into width by ceiling of height divided by two cells; the complete rectangle
+must fit. Half blocks use upper foreground and lower background; a missing lower
+pixel uses material zero. ASCII mode uses the upper pixel's glyph and color with
+material zero's background. Mono uses the upper glyph and pair zero. Half mode
+requires wide-cell support and a width-one half block in the current multibyte
+locale. Unavailable support or palette colors return status 2. Invalid arguments,
+resource limits, pair exhaustion and drawing failures return 1. The complete
+rectangle is compiled before window writes; a later curses write failure can
+partially change retained cells. Cursor, background and attributes are preserved.
+No input is read or presentation performed. Use tt(stage) or tt(viewport), then
+tt(present). Pairs use the immutable session cache and are never recycled while
+retained cells could refer to them.)
+sitem(tt(free) var(name))(
+Release the surface without changing previously drawn cells. tt(end) and module
+unload release all raster surfaces, including surfaces created headlessly.)
+endsitem()
+
+The tt(resourceinfo) result additionally includes tt(raster_surfaces),
+tt(raster_bytes) and tt(raster_byte_limit). Full experimental contracts,
+reference fixtures and measurement instructions accompany the module in
+tt(docs/raster-experiment.md).
 
 subsect(Parameters)
 
