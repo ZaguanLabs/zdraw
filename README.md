@@ -1,6 +1,6 @@
 # zdraw
 
-**Version: 0.1.0** · [Release notes](CHANGELOG.md)
+**Version: 0.1.1** · [Release notes](CHANGELOG.md)
 
 Build text-and-cell terminal interfaces in Zsh: styled panels, scrolling lists
 and tables, editable forms, and responsive layouts. Choose the companion
@@ -25,28 +25,34 @@ the general scope stop remains in force.
 
 ## Build and test
 
-You need Zsh, GNU Make, a C compiler, Autoconf/Autoheader, M4, Patch, curses
+You need Zsh 5.8 or later, GNU Make, a C compiler, Autoconf/Autoheader, M4, Patch, curses
 headers/libraries, Python 3.9+, and a UTF-8 locale. The test terminfo database
 must include `xterm-256color` and `vt100`; truecolor fixtures need `tic -x`.
-Download a public Zsh release and build from the repository root:
+Download the public minimum-version source and build from the repository root
+(Linux; see the build guide for other source versions):
 
 ```sh
 mkdir -p .build/downloads .build/sources
-curl -fL https://www.zsh.org/pub/zsh-5.9.2.tar.xz \
-  -o .build/downloads/zsh-5.9.2.tar.xz
+curl -fL https://www.zsh.org/pub/old/zsh-5.8.tar.xz \
+  -o .build/downloads/zsh-5.8.tar.xz
 # Verify against the publisher's SHA256SUM before extracting:
 printf '%s  %s\n' \
-  36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81 \
-  .build/downloads/zsh-5.9.2.tar.xz | sha256sum -c -
-tar -xJf .build/downloads/zsh-5.9.2.tar.xz -C .build/sources
-export ZSH_BUILD_ROOT="$PWD/.build/sources/zsh-5.9.2"
-make test
+  dcc4b54cc5565670a65581760261c163d720991f0d06486da61f8d839b52de27 \
+  .build/downloads/zsh-5.8.tar.xz | sha256sum -c -
+tar -xJf .build/downloads/zsh-5.8.tar.xz -C .build/sources
+export ZSH_BUILD_ROOT="$PWD/.build/sources/zsh-5.8"
+# Compatibility settings for old upstream configure probes on modern Linux:
+export CFLAGS='-O2 -std=gnu17 -Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types'
+export zsh_cv_sys_tcsetpgrp=yes
+make build
+make test ZSH_BIN="$PWD/.build/zsh/Src/zsh"
 ```
 
 The build works in `.build/`, preserves the supplied sources and does not install
 anything. Tests use the shell built alongside the module. A module built for one
 Zsh configuration is **not a universal binary** for other shells or platforms.
-Linux is verified; BSD/macOS remain unverified.
+Linux is verified; BSD/macOS remain unverified. Zsh 5.8 and 5.9.2 are exercised
+separately in CI; 5.9.2 is not a runtime requirement.
 
 See [build options, ABI matching, migration and upstream contributions](docs/building.md)
 for the full instructions and publisher checksum link.

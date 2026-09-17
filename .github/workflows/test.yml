@@ -16,10 +16,29 @@ jobs:
   linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - zsh: '5.8'
+            archive: https://www.zsh.org/pub/old/zsh-5.8.tar.xz
+            sha256: dcc4b54cc5565670a65581760261c163d720991f0d06486da61f8d839b52de27
+            # Old upstream configure probes use pre-C99 declarations. Keep
+            # their warnings visible without modern compilers rejecting them.
+            cflags: -O2 -std=gnu17 -Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types
+          - zsh: '5.9.2'
+            archive: https://www.zsh.org/pub/zsh-5.9.2.tar.xz
+            sha256: 36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81
+            cflags: -O2
+    name: Linux / Zsh ${{ matrix.zsh }}
     env:
-      ZSH_BUILD_ROOT: ${{ github.workspace }}/.build/sources/zsh-5.9.2
+      ZSH_BUILD_ROOT: ${{ github.workspace }}/.build/sources/zsh-${{ matrix.zsh }}
       ZSH_TEST_SHELL: ${{ github.workspace }}/.build/zsh/Src/zsh
       ZDRAW_TEST_LOCALE: C.UTF-8
+      CFLAGS: ${{ matrix.cflags }}
+      # Linux supports tcsetpgrp; Zsh 5.8's configure probe needs a controlling
+      # tty unless this cache answer is supplied. The PTY suite tests job control.
+      zsh_cv_sys_tcsetpgrp: 'yes'
       # Exercise reload when the shell retains libtinfo but not libncurses.
       LDFLAGS: -Wl,--as-needed
     steps:
@@ -31,10 +50,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zsh build-essential autoconf m4 patch libncurses-dev ncurses-bin python3 curl xz-utils locales
       - name: Download verified Zsh sources
+        env:
+          ZSH_RELEASE: ${{ matrix.zsh }}
+          ZSH_ARCHIVE: ${{ matrix.archive }}
+          ZSH_SHA256: ${{ matrix.sha256 }}
         run: |
           mkdir -p .build/downloads .build/sources
-          curl --fail --location --retry 3 https://www.zsh.org/pub/zsh-5.9.2.tar.xz -o .build/downloads/zsh-5.9.2.tar.xz
-          printf '%s  %s\n' 36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81 .build/downloads/zsh-5.9.2.tar.xz | sha256sum -c -
-          tar -xJf .build/downloads/zsh-5.9.2.tar.xz -C .build/sources
+          curl --fail --location --retry 3 "$ZSH_ARCHIVE" -o ".build/downloads/zsh-$ZSH_RELEASE.tar.xz"
+          printf '%s  %s\n' "$ZSH_SHA256" ".build/downloads/zsh-$ZSH_RELEASE.tar.xz" | sha256sum -c -
+          tar -xJf ".build/downloads/zsh-$ZSH_RELEASE.tar.xz" -C .build/sources
       - name: Build matching shell and run the PTY suite
-        run: make -j2 test
+        run: |
+          make -j2 build
+          make -j2 test ZSH_BIN="$ZSH_TEST_SHELL"

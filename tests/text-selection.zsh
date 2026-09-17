@@ -29,6 +29,14 @@ event 4 3 PRESSED1; event 5 3 ''; event 6 3 RELEASED1
 (( ! zdraw_text_selection[selected] && ! zdraw_text_selection[consumed] )) || fail outside
 event 10 3 PRESSED1
 (( ! zdraw_text_selection[selected] )) || fail padding
+event 10 3 RELEASED1
+# Repeated pressed states during an outside-origin drag are never new anchors.
+event 4 3 PRESSED1; event 6 3 PRESSED1; event 7 4 PRESSED1
+(( ! zdraw_text_selection[selected] && ! zdraw_text_selection[consumed] )) || fail 'outside repeated press'
+setup
+event 6 3 PRESSED1
+(( ! zdraw_text_selection[selected] && ! zdraw_text_selection[consumed] )) || fail 'outside replacement'
+event 6 3 RELEASED1
 event 6 3 PRESSED1
 selected b
 event 99 4 ''
@@ -86,7 +94,7 @@ selected b
 event 6 3 RELEASED1
 # Empty pane stays usable. Bad replacement is atomic.
 check zdraw-text-selection-init '' r1 0 0 3 4 native
-event 0 0 PRESSED1; selected ''
+event 0 0 PRESSED1; selected ''; event 0 0 RELEASED1
 reject zdraw-text-selection-init abc bad 0 0 3 4 native 0 0 0 '' xyz
 [[ $zdraw_text_selection[revision] == r1 ]] || fail atomic
 # Split Unicode at row edges must fail, even when each suffix looks printable.

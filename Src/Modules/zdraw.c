@@ -84,6 +84,22 @@
 static int zdraw_policy_string(const char *, char **);
 static int zdraw_text_policy(const char *, const char *, char *, int *);
 
+/* Parameter setters take ownership of a permanent, deep-copied array. The
+ * exported zlinklist2array gained an explicit ownership argument after
+ * Zsh 5.8. Keep this small conversion independent of that internal API change. */
+static char **
+zdraw_list_array(LinkList list)
+{
+    char **result = (char **)zalloc((countlinknodes(list) + 1) * sizeof(char *));
+    char **next = result;
+    LinkNode node;
+
+    for (node = firstnode(list); node; incnode(node))
+        *next++ = ztrdup((char *)getdata(node));
+    *next = NULL;
+    return result;
+}
+
 #if defined(HAVE_NEWPAD) && defined(HAVE_PNOUTREFRESH)
 # define ZDRAW_PADS 1
 #endif
@@ -3511,7 +3527,7 @@ zccmd_input(const char *nam, char **args)
 		    addlinknode(margs, "CTRL");
 		if (mevent.bstate & BUTTON_ALT)
 		    addlinknode(margs, "ALT");
-		if (!setaparam(args[3], zlinklist2array(margs, 1)))
+		if (!setaparam(args[3], zdraw_list_array(margs)))
 		    return 1;
 	    } else {
 #endif
@@ -3773,7 +3789,7 @@ zccmd_querychar(const char *nam, char **args)
     }
 
     /* Turn this into an array and store it. */
-    return !setaparam(args[1] ? args[1] : "reply", zlinklist2array(clist, 1));
+    return !setaparam(args[1] ? args[1] : "reply", zdraw_list_array(clist));
 }
 
 
@@ -3899,7 +3915,7 @@ zccmd_rowinfo(const char *nam, char **args)
     zdraw_colorinfo_value(info, "multibyte", p->multibyte);
     addlinknode(info, "locale");
     addlinknode(info, p->locale);
-    return !sethparam(args[1], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[1], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 #else
     (void)nam;
     (void)args;
@@ -4011,7 +4027,7 @@ zccmd_cellinfo(const char *nam, char **args)
     }
     if (zdraw_cell_record(nam, ((ZCWin)getdata(node))->win, &info))
         return 1;
-    return !sethparam(args[1], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[1], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 #define ZDRAW_SNAPSHOT_CELLS 65536
@@ -4187,7 +4203,7 @@ zccmd_snapshot(const char *nam, char **args)
         result = 1;
     if (result)
         return 1;
-    return !sethparam(args[1], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[1], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 #include "zdraw_raster.h"
@@ -4281,7 +4297,7 @@ zccmd_resourceinfo(const char *nam, char **args)
     zdraw_colorinfo_value(info, "copy_cell_limit", ZDRAW_COPY_CELLS);
     zdraw_colorinfo_value(info, "snapshot_cell_limit", ZDRAW_SNAPSHOT_CELLS);
     zdraw_colorinfo_value(info, "snapshot_byte_limit", (zlong)ZDRAW_SNAPSHOT_BYTES);
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 /* Signed event values (mouse coordinates can be outside a window). */
@@ -4503,7 +4519,7 @@ zdraw_focus_event(char *target, int focused)
     addlinknode(info, "source"); addlinknode(info, "focus-report");
     addlinknode(info, "focused"); addlinknode(info, focused ? "1" : "0");
     addlinknode(info, "text"); addlinknode(info, "");
-    return !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int
@@ -4523,7 +4539,7 @@ zdraw_keyboard_unknown(char *target, const char *reason)
     addlinknode(info, "text"); addlinknode(info, "");
     addlinknode(info, "raw"); addlinknode(info, metafy(zdraw_key_buffer, zdraw_key_used, META_HEAPDUP));
     zdraw_key_used = 0;
-    return !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int
@@ -4653,7 +4669,7 @@ zdraw_keyboard_record(char *target)
     /* Alternate identities are parsed and validated, but not requested or exposed. */
     addlinknode(info, "raw"); addlinknode(info, metafy(zdraw_key_buffer, zdraw_key_used, META_HEAPDUP));
     zdraw_key_used = 0;
-    return !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 /* Curses first recognizes its known sequences. Only an otherwise literal ESC
@@ -4950,7 +4966,7 @@ zccmd_capabilities(const char *nam, char **args)
         ZDRAW_CAP_FIELD("query", query);
 #undef ZDRAW_CAP_FIELD
     }
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 #ifdef ZDRAW_QUERIES
@@ -4965,7 +4981,7 @@ zdraw_query_event(char *target, int mode, const char *phase, int report)
     addlinknode(info, "text"); addlinknode(info, "");
     zdraw_event_number(info, "mode", zdraw_query_modes[mode]);
     zdraw_event_number(info, "report", report);
-    return !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int
@@ -5011,7 +5027,7 @@ zdraw_pending_resize(char *target)
     addlinknode(info, "terminal");
     zdraw_event_number(info, "rows", rows);
     zdraw_event_number(info, "columns", cols);
-    result = !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    result = !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
     if (!result) {
         zdraw_event_rows = rows;
         zdraw_event_cols = cols;
@@ -5044,7 +5060,7 @@ zccmd_inputinfo(const char *nam, char **args)
     zdraw_event_number(info, "paste_active", 0);
     zdraw_event_number(info, "paste_pending", 0);
 #endif
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 #ifdef ZDRAW_PASTE
@@ -5058,7 +5074,7 @@ zdraw_paste_record(char *target, const char *phase, char *data, int len)
     addlinknode(info, "encoding"); addlinknode(info, "byte");
     addlinknode(info, "source"); addlinknode(info, "bracketed-paste");
     zdraw_event_number(info, "bytes", len);
-    return !sethparam(target, zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(target, zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int
@@ -5310,7 +5326,7 @@ zccmd_event(const char *nam, char **args)
 #else
     addlinknode(info, "byte");
 #endif
-    return !sethparam(args[1], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[1], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int
@@ -5385,7 +5401,7 @@ zccmd_colorinfo(const char *nam, char **args)
     zdraw_colorinfo_value(info, "pairs_used", initialized ? next_cp : -1);
     zdraw_colorinfo_value(info, "pairs_free", initialized ? pair_limit - next_cp : -1);
 
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 
@@ -5473,7 +5489,7 @@ zccmd_textpolicy(const char *nam, char **args)
 #else
     zdraw_colorinfo_value(info, "native_cell_scalar_limit", -1);
 #endif
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 /* Headless width/clip query. Validation, including the discarded suffix,
@@ -5567,7 +5583,7 @@ zccmd_textinfo(const char *nam, char **args)
         addlinknode(info, "unicode_version"); addlinknode(info, ZDRAW_GRAPHEME_VERSION);
     }
 #endif
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 /* Point queries need only one retained range, regardless of input length.
@@ -5702,7 +5718,7 @@ zccmd_textpos(const char *nam, char **args)
         addlinknode(info, "unicode_version"); addlinknode(info, ZDRAW_GRAPHEME_VERSION);
     }
 #endif
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 #define ZDRAW_WRAP_BYTES 1048576
@@ -5803,7 +5819,7 @@ zccmd_textwrap(const char *nam, char **args)
     zdraw_event_number(info, "total_width", width);
     zdraw_event_number(info, "byte_limit", ZDRAW_WRAP_BYTES);
     zdraw_event_number(info, "line_limit", ZDRAW_WRAP_LINES);
-    return !sethparam(args[0], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
 }
 
 static int

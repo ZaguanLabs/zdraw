@@ -30,6 +30,8 @@ The complete `make test` suite contains 174 tests, including optional native
 build variants and the five new test methods. The matching source/build used
 for this run is Zsh 5.9.2 with ncursesw 6.5.20250802. The companion uses Zsh 5.8
 syntax and APIs, but a separate Zsh 5.8 build was not run for this experiment.
+The subsequent [Zsh 5.8 verification](portability/zsh-5.8.md) covers the full
+native module and companion suite after the compatibility fixes.
 
 ## Real Kitty observation
 

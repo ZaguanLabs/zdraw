@@ -4,7 +4,7 @@
 
 Prerequisites:
 
-- Zsh to run the build script, GNU Make, a C compiler, and standard Unix build
+- Zsh 5.8 or later to run the build script, GNU Make, a C compiler, and standard Unix build
   tools (including a POSIX shell, Awk, and Sed).
 - Autoconf (including Autoheader), M4, and Patch to regenerate Zsh's configuration
   with the optional drawing function checks.
@@ -16,21 +16,47 @@ Prerequisites:
 - Curl, Tar, and Xz for the download example below.
 
 From this repository's root, download and extract a public
-[Zsh release](https://www.zsh.org/pub/), then build:
+[Zsh release](https://www.zsh.org/pub/). This Linux example verifies the minimum
+supported version, Zsh 5.8, with a matching shell and module:
 
 ```sh
 mkdir -p .build/downloads .build/sources
-curl -fL https://www.zsh.org/pub/zsh-5.9.2.tar.xz \
-  -o .build/downloads/zsh-5.9.2.tar.xz
-tar -xJf .build/downloads/zsh-5.9.2.tar.xz -C .build/sources
-export ZSH_BUILD_ROOT="$PWD/.build/sources/zsh-5.9.2"
-make test
+curl -fL https://www.zsh.org/pub/old/zsh-5.8.tar.xz \
+  -o .build/downloads/zsh-5.8.tar.xz
+printf '%s  %s\n' \
+  dcc4b54cc5565670a65581760261c163d720991f0d06486da61f8d839b52de27 \
+  .build/downloads/zsh-5.8.tar.xz | sha256sum -c -
+tar -xJf .build/downloads/zsh-5.8.tar.xz -C .build/sources
+export ZSH_BUILD_ROOT="$PWD/.build/sources/zsh-5.8"
+export CFLAGS='-O2 -std=gnu17 -Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types'
+export zsh_cv_sys_tcsetpgrp=yes
+make build
+make test ZSH_BIN="$PWD/.build/zsh/Src/zsh"
 ```
 
-The release archive's SHA-256 is
-`36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81`,
-as listed in the publisher's [checksums](https://www.zsh.org/pub/SHA256SUM).
+The archive's SHA-256 is listed in the publisher's
+[old-release checksums](https://www.zsh.org/pub/old/SHA256SUM).
 Use `gmake` instead of `make` on systems where GNU Make has that name.
+
+The `CFLAGS` above are for building Zsh 5.8's original source with current GCC
+or Clang: use the GNU C17 dialect and leave legacy implicit-declaration and
+pointer-conversion diagnostics as warnings. Otherwise old configure probes can
+silently misdetect working system facilities or disable dynamic modules. They
+do not enable newer Zsh features or alter the source tree. Preserve any additional
+compiler flags your platform requires. The `tcsetpgrp` cache answer is explicitly
+Linux-specific: Linux supports it, while Zsh 5.8's configure probe needs a
+controlling terminal to discover that. On another platform, configure in a
+terminal or establish that platform's correct answer; do not copy this override
+as a portability claim. The PTY suite exercises terminal ownership/job control.
+
+To test current Zsh 5.9.2 instead, use
+`https://www.zsh.org/pub/zsh-5.9.2.tar.xz`, SHA-256
+`36fa734374b44783582cec09bcd67822e2f992c779ec1624ab5596df078d2f81`, from the
+publisher's [current checksums](https://www.zsh.org/pub/SHA256SUM). Set
+`ZSH_BUILD_ROOT` to that extracted tree; the legacy compiler and `tcsetpgrp`
+settings are unnecessary. Run `make clean` before switching build sources, or
+use a separate checkout for each version. Build first, then use its shell as
+`ZSH_BIN` for all syntax checks as well as the native/PTY tests.
 
 The build copies the supplied source tree to `.build/zsh`, adds this module,
 applies the build integration patch in `patches/`, and regenerates configuration
@@ -79,7 +105,9 @@ matching shell, run `ZSH_TEST_SHELL=/path/to/zsh make test` with `ZSH_BUILD_ROOT
 still set. A binary built for one Zsh configuration or operating system is not
 a universal binary.
 
-The public Zsh 5.9.2 release is the tested source baseline. The implementation
+Zsh 5.8 is the minimum supported source/runtime version; 5.9.2 is also tested.
+See the [minimum-version verification record](portability/zsh-5.8.md).
+The implementation
 uses Zsh's platform configuration and curses abstractions; Linux is currently
 verified, while BSD/macOS and alternative curses libraries still need testing.
 
@@ -131,8 +159,9 @@ The original copyright notices and [Zsh licence](../LICENCE) are retained.
 
 ## Continuous integration
 
-[The Test workflow](../.github/workflows/test.yml) builds the pinned, checksum-verified
-Zsh 5.9.2 release and runs `make test` on Ubuntu 24.04 for pushes and pull requests.
+[The Test workflow](../.github/workflows/test.yml) independently builds pinned,
+checksum-verified Zsh 5.8 and 5.9.2 releases and runs `make test` on Ubuntu 24.04
+for pushes and pull requests. Syntax checks also use each matching built shell.
 The Linux build explicitly uses `--as-needed` to exercise native unload/reload
 when libtinfo remains loaded independently of libncurses.
 The suite uses the matching built shell, including its PTY tests and native

@@ -112,7 +112,10 @@ The component exposes these result fields (other keys are private):
 | `valid` | The current mapping has not been invalidated. |
 
 A plain left press over a text unit selects that whole unit and anchors a drag.
-Modified presses and presses in padding/decorations do not start it. Dragging
+Modified presses and presses in padding/decorations do not start it. A press
+that starts outside selectable text is remembered through release, even if
+motion repeats `PRESSED1` or the mapping is replaced. Its events remain
+unconsumed so the original pane can handle them. Dragging
 includes complete anchor and endpoint units in either direction. Beyond the
 left/right content edge, the endpoint is the row's first/last text boundary.
 Above/below the rectangle, the row is clamped first. Unmapped rows resolve to

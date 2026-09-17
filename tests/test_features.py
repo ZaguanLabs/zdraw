@@ -193,7 +193,9 @@ class FeatureTests(unittest.TestCase):
 
     def test_stock_module_discovery_fallback(self):
         with tempfile.TemporaryDirectory(prefix='features-stock-', dir=ROOT / '.build') as tmp:
-            modules = self.variant(tmp, (ROOT / 'upstream/curses.c').read_text(), stock=True)
+            # Stock means the selected shell's own module, with its matching C
+            # API, rather than the newer provenance snapshot in upstream/.
+            modules = self.variant(tmp, (BUILD / 'Src/Modules/curses.c').read_text(), stock=True)
             self.assertEqual(self.run_shell('''
                 zmodload zsh/curses || exit 1
                 zmodload -F -e zsh/curses +p:zcurses_features

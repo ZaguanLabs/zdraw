@@ -1,3 +1,5 @@
-
 # Preserve the checksum-pinned Unicode conformance data byte for byte.
 tests/unicode/GraphemeBreakTest.txt -whitespace
+
+# Unified-diff context must preserve the original indentation and blank lines.
+patches/*.patch whitespace=-space-before-tab,-blank-at-eol

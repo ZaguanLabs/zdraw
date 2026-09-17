@@ -1,30 +1,21 @@
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1280,7 +1280,15 @@
+@@ -1279,4 +1279,9 @@
+ 	       brk sbrk \
  	       pathconf sysconf \
++	       wborder_set waddchnstr wadd_wchnstr wgetbkgrnd wbkgrndset \
++	       wattr_get wattr_set copywin newpad pnoutrefresh wchgat \
++	       mvwin wresize define_key key_defined keybound \
++	       get_escdelay set_escdelay def_prog_mode reset_prog_mode \
++	       newterm delscreen set_curterm init_extended_pair extended_color_content \
  	       tgetent tigetflag tigetnum tigetstr setupterm initscr resize_term \
--	       getcchar setcchar waddwstr wget_wch win_wch use_default_colors \
-+	       getcchar setcchar waddwstr wget_wch win_wch wborder_set use_default_colors \
-+	       waddchnstr wadd_wchnstr wgetbkgrnd wbkgrndset \
-+	       wattr_get wattr_set \
-+	       copywin newpad pnoutrefresh wchgat \
-+	       mvwin wresize \
-+	       define_key key_defined keybound get_escdelay set_escdelay \
-+	       def_prog_mode reset_prog_mode \
-+	       newterm delscreen set_curterm \
-+	       init_extended_pair extended_color_content \
- 	       nl_langinfo \
- 	       erand48 open_memstream \
- 	       posix_openpt \
- 	       wctomb iconv \
+ 	       getcchar setcchar waddwstr wget_wch win_wch use_default_colors \
 --- a/Doc/Makefile.in
 +++ b/Doc/Makefile.in
-@@ -70,7 +70,7 @@
- Zsh/mod_regex.yo Zsh/mod_sched.yo Zsh/mod_socket.yo \
- Zsh/mod_stat.yo  Zsh/mod_system.yo Zsh/mod_tcp.yo \
- Zsh/mod_termcap.yo Zsh/mod_terminfo.yo \
--Zsh/mod_watch.yo \
-+Zsh/mod_watch.yo Zsh/mod_zdraw.yo \
+@@ -74,5 +74,5 @@
  Zsh/mod_zftp.yo Zsh/mod_zle.yo Zsh/mod_zleparameter.yo \
  Zsh/mod_zprof.yo Zsh/mod_zpty.yo Zsh/mod_zselect.yo \
- Zsh/mod_zutil.yo
+-Zsh/mod_zutil.yo
++Zsh/mod_zutil.yo Zsh/mod_zdraw.yo
+ 
+ YODLSRC = zmacros.yo zman.yo ztexi.yo Zsh/arith.yo Zsh/builtins.yo \

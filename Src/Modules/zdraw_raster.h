@@ -417,7 +417,7 @@ zccmd_raster(const char *nam, char **args)
         zdraw_colorinfo_value(info, "dimension_limit", ZDRAW_RASTER_DIMENSION);
         zdraw_colorinfo_value(info, "triangle_limit", ZDRAW_RASTER_TRIANGLES);
         zdraw_colorinfo_value(info, "work_limit", ZDRAW_RASTER_WORK);
-        return !sethparam(args[2], zlinklist2array(info, 1)) || (errflag & ERRFLAG_ERROR);
+        return !sethparam(args[2], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
     }
 invalid:
     zwarnnam(nam, "invalid raster operation, arguments, resource or budget");

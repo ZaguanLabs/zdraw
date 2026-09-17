@@ -47,7 +47,7 @@ function zdraw-text-selection-init {
     { _zdraw_ts_error 'policy must be native or the shared grapheme-safe drawing policy'; return 1; }
   local -A _zts_info _zts_hit _zts_build=(format zdraw-text-selection-experiment-1
     source "$_zts_source" revision "$_zts_revision" y $_zts_y x $_zts_x height $_zts_h width $_zts_w
-    policy "$_zts_policy" valid 1 active 0 draining 0 selected 0 start 0 end 0 consumed 0 changed 1)
+    policy "$_zts_policy" valid 1 active 0 draining 0 outside 0 selected 0 start 0 end 0 consumed 0 changed 1)
   _zdraw_ts_bytes "$_zts_source"
   local -i _zts_bytes=$REPLY
   (( _zts_bytes <= 16777216 )) || { _zdraw_ts_error 'source exceeds 16 MiB'; return 1; }
@@ -141,6 +141,7 @@ function zdraw-text-selection-init {
   done
   # Replacement also drains a still-held gesture; it cannot select new content.
   _zts_build[draining]=${zdraw_text_selection[draining]:-0}
+  _zts_build[outside]=${zdraw_text_selection[outside]:-0}
   [[ ${zdraw_text_selection[active]-0} == 1 ]] && _zts_build[draining]=1
   zdraw_text_selection=("${(@kv)_zts_build}")
   return 0
@@ -167,6 +168,7 @@ function zdraw-text-selection-reset {
   emulate -L zsh
   zdraw-text-selection-clear || return
   zdraw_text_selection[draining]=0
+  zdraw_text_selection[outside]=0
 }
 
 # revision; reads caller-owned zdraw_selection_event. Success != consumed.
@@ -199,7 +201,16 @@ function zdraw-text-selection-event {
     (( _zts_release )) && zdraw_text_selection[draining]=0
     return 0
   fi
-  (( zdraw_text_selection[valid] )) || return 0
+  # An outside-origin gesture remains available to its owning pane. Some
+  # event sources repeat PRESSED1 on motion; that must not become a new anchor.
+  if (( zdraw_text_selection[outside] )); then
+    (( _zts_release )) && zdraw_text_selection[outside]=0
+    return 0
+  fi
+  if (( ! zdraw_text_selection[valid] )); then
+    (( _zts_press && ! _zts_release )) && zdraw_text_selection[outside]=1
+    return 0
+  fi
   # An active drag owns mouse events even when they carry other button states.
   (( zdraw_text_selection[active] )) && zdraw_text_selection[consumed]=1
   if (( ! zdraw_text_selection[active] && ! _zts_press )); then return 0; fi
@@ -212,9 +223,11 @@ function zdraw-text-selection-event {
   _zts_r=$(( zdraw_selection_event[y]-zdraw_text_selection[y] ))
   _zts_c=$(( zdraw_selection_event[x]-zdraw_text_selection[x] ))
   if (( ! zdraw_text_selection[active] )); then
-    [[ ${zdraw_selection_event[modifiers]-} == '' ]] || return 0
     _zts_u=${zdraw_text_selection[$_zts_r,c,$_zts_c]:-0}
-    (( _zts_u )) || return 0
+    if [[ ${zdraw_selection_event[modifiers]-} != '' ]] || (( ! _zts_u )); then
+      (( ! _zts_release )) && zdraw_text_selection[outside]=1
+      return 0
+    fi
     zdraw_text_selection[anchor_start]=$zdraw_text_selection[u,$_zts_u,start]
     zdraw_text_selection[anchor_end]=$zdraw_text_selection[u,$_zts_u,end]
     zdraw_text_selection[active]=1 zdraw_text_selection[consumed]=1
