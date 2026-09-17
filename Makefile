@@ -7,6 +7,12 @@ build:
 	+ZDRAW_MAKE="$(MAKE)" "$(ZSH_BIN)" -df scripts/build.zsh
 
 test: build
+	"$(ZSH_BIN)" -dfn lib/zdraw-text-selection.zsh
+	"$(ZSH_BIN)" -dfn examples/text-selection.zsh
+	"$(ZSH_BIN)" -dfn tests/text-selection.zsh
+	"$(ZSH_BIN)" -dfn tests/text-selection-draw.zsh
+	"$(ZSH_BIN)" -dfn tests/text-selection-example.zsh
+	"$(ZSH_BIN)" -dfn benchmarks/text-selection.zsh
 	"$(ZSH_BIN)" -dfn examples/held-keys.zsh
 	"$(ZSH_BIN)" -dfn tests/held-keys.zsh
 	"$(ZSH_BIN)" -dfn tests/raster.zsh

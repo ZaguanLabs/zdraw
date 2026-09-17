@@ -3598,15 +3598,13 @@ zccmd_mouse(const char *nam, char **args)
 
     for (; *args; args++) {
 	if (!strcmp(*args, "delay")) {
-	    char *eptr;
-	    zlong delay;
+	    int delay;
 
-	    if (!*++args ||
-		((delay = zstrtol(*args, &eptr, 10)), eptr != NULL)) {
-		zwarnnam(nam, "mouse delay requires an integer argument");
+	    if (!*++args || zdraw_nonnegative(*args, &delay)) {
+		zwarnnam(nam, "mouse delay requires a nonnegative integer argument");
 		return 1;
 	    }
-	    mouseinterval((int)delay);
+	    mouseinterval(delay);
 	} else {
 	    char *arg = *args;
 	    int onoff = 1;

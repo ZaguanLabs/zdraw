@@ -1,5 +1,7 @@
 # zdraw
 
+**Version: 0.1.0** · [Release notes](CHANGELOG.md)
+
 Build text-and-cell terminal interfaces in Zsh: styled panels, scrolling lists
 and tables, editable forms, and responsive layouts. Choose the companion
 libraries you need and customize their colors, borders, spacing and states.
@@ -12,6 +14,10 @@ data, commands and event-loop policy.
 **Current focus:** improve the usefulness, usability and reliability of the
 existing toolkit. Feature expansion is stopped. Images and scaled text are out
 of scope. See the [scope and quality bar](docs/scope.md).
+
+A bounded [text-selection companion experiment](docs/text-selection.md) provides
+pane-confined mouse selection, source-text extraction and a standalone two-pane
+example. Its API is provisional; tests and a Kitty comparison are recorded.
 
 A separately authorized [R1/R2 raster experiment](docs/raster-experiment.md)
 evaluates bounded triangle filling and half-block packing. It is experimental;
@@ -44,6 +50,19 @@ Linux is verified; BSD/macOS remain unverified.
 
 See [build options, ABI matching, migration and upstream contributions](docs/building.md)
 for the full instructions and publisher checksum link.
+
+## Versioning
+
+[VERSION](VERSION) is the authoritative project version. Releases use annotated
+Git tags named `vMAJOR.MINOR.PATCH`, starting with `v0.1.0`, and are recorded in
+[CHANGELOG.md](CHANGELOG.md). The version covers the native module and bundled
+Zsh companions; it is independent of the Zsh source version and ABI.
+
+For a release, update `VERSION`, the displayed version above and the changelog,
+run the documented checks, commit the changes, and tag that commit. During the
+`0.x` series, incompatible supported-API changes increment the minor version;
+compatible fixes increment the patch version. Explicitly experimental APIs
+remain provisional.
 
 ## Try the components
 

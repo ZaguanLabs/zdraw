@@ -1351,13 +1351,15 @@ There is no window argument; mouse options are global.
 `tt(zdraw mouse)' with no arguments returns status 0 if mouse handling
 is possible, else status 1.  Otherwise, the possible arguments (which
 may be combined on the same command line) are as follows.
-tt(delay) var(num) sets the maximum delay in milliseconds between press and
+tt(delay) var(num) takes a nonnegative decimal integer and sets the maximum delay in milliseconds between press and
 release events to be considered as a click; the value 0 disables click
 resolution, and the default is one sixth of a second.  tt(motion) proceeded
 by an optional `tt(PLUS())' (the default) or tt(-) turns on or off
 reporting of mouse motion in addition to clicks, presses and releases,
-which are always reported.  However, it appears reports for mouse
-motion are not currently implemented.
+which are always reported. Delivery of motion events depends on the terminal
+and curses implementation. For application-owned dragging, use tt(delay 0 motion)
+and request mouse input on every read. Mouse options belong to the application;
+companions must not silently change another component's configuration.
 
 The subcommand tt(timeout) specifies a timeout value for input from
 var(targetwin).  If var(intval) is negative, `tt(zdraw input)' waits

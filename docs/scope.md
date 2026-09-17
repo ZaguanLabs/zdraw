@@ -28,6 +28,17 @@ remain bounded ways to display data; they are not a route into image rendering.
 
 ## The hard stop
 
+### Bounded exception: text-selection companion, 2026-09-17
+
+The maintainer approved the bounded experimental companion described in
+[text-selection.md](text-selection.md): pane-confined source ranges and highlight
+spans, an explicit event-consumption contract, a two-pane example, correctness
+and PTY checks, and drag measurements. A demonstrated mouse-delay validation
+fix is included. The API remains provisional; terminal comparison and the
+quality requirements below still apply before supported promotion. This does
+not authorize clipboard protocols, autoscroll, off-screen selection, an
+application framework, or broader roadmap progression.
+
 ### Bounded exception: R1/R2 experiment, 2026-09-14
 
 The maintainer explicitly approved proceeding with an experiment in native

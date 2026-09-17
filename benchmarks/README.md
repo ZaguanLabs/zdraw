@@ -263,3 +263,11 @@ needed. That proposal should distinguish raster compilation from row encoding,
 measure filled/erased and Unicode-fallback scenes, and retain current bounds and
 failure behavior. This milestone does not add a native canvas API or approve a
 batch API without its own validation, partial-failure and budget specification.
+
+## Pane-confined text selection (experimental)
+
+Run `LC_ALL=C.UTF-8 .build/zsh/Src/zsh -df benchmarks/text-selection.zsh` after
+building with the selected public Zsh source. It separates layout initialization,
+retained mouse-event updates, and span generation for a fixed viewport on short
+and long documents. It does not measure terminal presentation latency. See the
+[experiment record](../docs/text-selection-evaluation.md) for results and limits.
