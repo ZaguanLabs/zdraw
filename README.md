@@ -1,6 +1,6 @@
 # zdraw
 
-**Version: 0.1.1** · [Release notes](CHANGELOG.md)
+**Version: 0.1.2** · [Release notes](CHANGELOG.md)
 
 Build text-and-cell terminal interfaces in Zsh: styled panels, scrolling lists
 and tables, editable forms, and responsive layouts. Choose the companion
@@ -20,7 +20,8 @@ pane-confined mouse selection, source-text extraction and a standalone two-pane
 example. Its API is provisional; tests and a Kitty comparison are recorded.
 
 A separately authorized [R1/R2 raster experiment](docs/raster-experiment.md)
-evaluates bounded triangle filling and half-block packing. It is experimental;
+evaluates bounded triangle filling, compact rectangle batches and half-block
+packing. It is experimental;
 the general scope stop remains in force.
 
 ## Build and test

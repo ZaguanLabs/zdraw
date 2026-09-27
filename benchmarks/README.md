@@ -271,3 +271,30 @@ building with the selected public Zsh source. It separates layout initialization
 retained mouse-event updates, and span generation for a fixed viewport on short
 and long documents. It does not measure terminal presentation latency. See the
 [experiment record](../docs/text-selection-evaluation.md) for results and limits.
+
+## Raster rectangle batches (experimental)
+
+After building with the selected public Zsh source:
+
+```sh
+python3 benchmarks/raster-rectangles.py > .build/rectangles-benchmark.json
+python3 benchmarks/raster-rectangles.py --trials 1 --repetitions 2 --modes ascii mono
+```
+
+The bundled Cinder Relay capture supplies 102 real frames across three sizes and
+both detail settings. Both backends reconstruct submission arrays in Zsh;
+timings separate fixture splitting, array construction, clear, native submission,
+packing and explicit presentation. Backend order alternates between trials.
+Terminal output hashes must match. Projection, ray traversal, simulation and
+the HUD are excluded; this is not a game frame-rate measurement. See the
+[recorded results](raster-rectangles-2026-09-27.md).
+
+An optional capture command accepts an explicitly supplied Cinder Relay source
+tree and writes a fixture; it never edits that tree or uses its installed module:
+
+```sh
+python3 scripts/capture-raster-rectangles.py --source /path/to/cinder-relay \
+  --output .build/cinder-rectangles.json.gz
+```
+
+Normal tests and benchmarks need only the committed fixture, not game sources.

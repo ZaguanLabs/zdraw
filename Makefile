@@ -17,6 +17,7 @@ test: build
 	"$(ZSH_BIN)" -dfn tests/held-keys.zsh
 	"$(ZSH_BIN)" -dfn tests/raster.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/raster.zsh
+	"$(ZSH_BIN)" -dfn benchmarks/raster-rectangles.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/raster-reference.zsh
 	"$(ZSH_BIN)" -dfn examples/review-composition.zsh
 	"$(ZSH_BIN)" -dfn tests/review-composition.zsh
@@ -39,6 +40,7 @@ test: build
 	"$(ZSH_BIN)" -dfn tests/geometry.zsh
 	"$(ZSH_BIN)" -dfn tests/drawing.zsh
 	"$(ZSH_BIN)" -dfn tests/colorinfo.zsh
+	"$(ZSH_BIN)" -dfn tests/colorplan.zsh
 	"$(ZSH_BIN)" -dfn tests/cellinfo.zsh
 	"$(ZSH_BIN)" -dfn tests/snapshot.zsh
 	"$(ZSH_BIN)" -dfn tests/screen.zsh

@@ -101,7 +101,11 @@ Compute palettes and ramps during setup or theme changes. Reuse them on every
 frame. The helper has no global color cache; repeated spellings reuse the native
 pair cache. Gradients are bounded, but repeatedly creating different palettes
 still consumes session pair slots. Monitor `zdraw colorinfo` for the native
-budget; end releases it. Conversion cannot prevent native allocation failures.
+budget; end releases it. The experimental
+[`colorplan`](native-api.md#color-pair-preflight-experimental) operation checks
+an ordered list of resolved foreground/background pairs against the current
+cache and drawing-path limits before preparation allocates them. It reserves
+nothing. Conversion and preflight cannot prevent library allocation failures.
 
 ## Precision and fallbacks
 

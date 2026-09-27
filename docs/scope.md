@@ -28,6 +28,38 @@ remain bounded ways to display data; they are not a route into image rendering.
 
 ## The hard stop
 
+### Bounded exception: raster rectangle batches, 2026-09-27
+
+The maintainer approved the next bounded experiment after color-pair preflight:
+capture Cinder Relay inputs, define rectangles to match its existing two-triangle
+submission, and measure output equivalence and submission cost including Zsh
+argument construction. The source supplied for capture is used only by an
+explicit development command; normal builds, tests and benchmarks use the
+self-contained fixture in this repository.
+
+This adds only axis-aligned rectangles with material and top/bottom inverse
+depth, expanded through the existing triangle kernel. It does not authorize
+textures, alpha, RGB raster storage, new presentation paths or broader graphics
+work. The addition remains experimental; see the
+[contract](raster-experiment.md#rectangle-batches) and
+[measurements](../benchmarks/raster-rectangles-2026-09-27.md).
+
+### Bounded task: exact color-pair preflight, 2026-09-27
+
+Following review of application requests and the maintainer's instruction to
+proceed, the selected first task is experimental, non-allocating preflight of an
+ordered list of native color pairs. It reports cache reuse, new demand and
+drawing-path limits without changing the existing allocation contract. See
+[the provisional API](native-api.md#color-pair-preflight-experimental).
+Self-contained correctness fixtures cover budget pressure; the synthetic
+15,718-pair case is not the requesting application's captured workload.
+
+This task stops at exact accounting, documentation and validation. Approximation,
+pair recycling, RGB raster storage, resolve filters, alpha, selective raster
+readback remain separate proposals; rectangle batches were subsequently approved
+as the bounded experiment above. The broader quality
+bar still applies before supported promotion; this does not reopen the roadmap.
+
 ### Bounded exception: text-selection companion, 2026-09-17
 
 The maintainer approved the bounded experimental companion described in

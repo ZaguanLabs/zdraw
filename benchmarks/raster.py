@@ -21,7 +21,9 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def trial(shell, modules, fixture, repetitions, backend, mode, width, height):
+def trial(shell, modules, fixture, repetitions, backend, mode, width, height,
+          script='raster.zsh',
+          phase_names=('split_ms', 'clear_ms', 'raster_ms', 'pack_ms', 'present_ms', 'total_ms')):
     read_fd, write_fd = os.pipe()
     os.set_inheritable(write_fd, True)
     pid, terminal = pty.fork()
@@ -33,7 +35,7 @@ def trial(shell, modules, fixture, repetitions, backend, mode, width, height):
                           LC_ALL=os.environ.get('ZDRAW_TEST_LOCALE', 'C.UTF-8'))
         os.environ.pop('LINES', None)
         os.environ.pop('COLUMNS', None)
-        command = [str(shell), '-df', str(ROOT / 'benchmarks/raster.zsh'),
+        command = [str(shell), '-df', str(ROOT / 'benchmarks' / script),
                    str(modules), str(fixture), str(repetitions), str(write_fd), backend, mode]
         os.execv(command[0], command)
     os.close(write_fd)
@@ -61,8 +63,10 @@ def trial(shell, modules, fixture, repetitions, backend, mode, width, height):
         if os.waitstatus_to_exitcode(status):
             raise RuntimeError(output.decode(errors='replace'))
         values = list(map(float, report.split()))
+        if len(values) != len(phase_names) + 1:
+            raise RuntimeError(f'Unexpected benchmark report: {report!r}')
         count = int(values[0])
-        result = dict(zip(('split_ms', 'clear_ms', 'raster_ms', 'pack_ms', 'present_ms', 'total_ms'),
+        result = dict(zip(phase_names,
                           (value*1000/count for value in values[1:])))
         result.update(frames=count, output_bytes=len(output),
                       output_sha256=hashlib.sha256(output).hexdigest(), backend=backend, mode=mode)

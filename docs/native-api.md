@@ -48,6 +48,7 @@ unknown, so the application chooses its fallback policy.
 | `cell_inspection` | Structured readback of the current retained cell |
 | `wide_cell_inspection` | Complete complex-character text, including stored combining marks |
 | `colorinfo` | Runtime color capabilities and allocation information |
+| `colorplan` | Experimental non-allocating color-pair preflight |
 | `resource_info` | Passive resource counts, budgets and prepared-row reuse |
 | `truecolor` | Optional ncurses extended-color APIs and terminfo queries for RGB |
 | `structured_events` | Associative input records using the curses decoder |
@@ -176,6 +177,75 @@ for the full curses cell, retaining its existing first-character result when
 combining marks are present. Drawing tests cover these paths, custom borders,
 deferred refresh, color validation and pair exhaustion, and a temporary module
 build using narrow drawing paths.
+
+### Color-pair preflight (experimental)
+
+```zsh
+typeset -A plan
+typeset -a frame_pairs=(red/black blue/black red/black)
+zdraw colorplan plan spans "${frame_pairs[@]}" || return
+if (( plan[fits] )); then
+  zdraw prepare row red/black Red blue/black Blue red/black Again
+fi
+```
+
+`zdraw colorplan ASSOCIATION attr|bg|spans [FG/BG ...]` checks the pair budget
+of an initialized session without allocating pairs. Use `spans` for prepared
+rows and other operations using the same cell writer. `attr` uses the full
+session pair range; `bg` and `spans` apply their respective drawing-path limits.
+This is a provisional resource-accounting extension, not a full frame validator.
+
+Supply the exact color-pair strings in their intended allocation order. Include
+only pairs that drawing will actually request: omit styles without a color pair,
+empty or fully clipped spans, and already-prepared rows drawn without reparsing.
+Do not pass comma-separated styles or text. Repeated strings count once;
+different spellings (including named versus decimal colors and hex case) remain
+distinct, matching the existing cache. RGB requires the existing truecolor opt-in,
+including for cached pairs. Nothing selects a fallback or approximates colors.
+
+The ordinary writable association follows `colorinfo`'s destination rules.
+Status 0 means a report was assigned, **including when `fits=0`**. Status 1 means
+invalid arguments, no session, an invalid color spelling for the current session,
+an exceeded request bound, or assignment failure. Status 2 means the selected
+writer or required color/default-color support is unavailable. Rejected requests
+leave the destination unchanged. An empty list reports zero demand and fits if
+the selected writer exists, including in monochrome sessions.
+
+| Key | Meaning |
+| --- | --- |
+| `requested`, `unique` | Submitted pair strings and distinct spellings |
+| `pairs_reused` | Distinct requests reusing existing cache entries, including pair 0 |
+| `pairs_needed` | New nonzero pairs required; `unique = pairs_reused + pairs_needed` |
+| `pairs_used`, `pairs_free`, `pair_limit` | Current session budget, as in `colorinfo` |
+| `path_pair_limit` | Highest pair ID usable by the selected drawing path |
+| `max_pair` | Highest existing or prospective ID required by this list; 0 for an empty list; may exceed the limits |
+| `fits` | 1 if both session capacity and drawing-path pair-ID limits suffice, otherwise 0 |
+| `request_limit` | At most 65,536 pair strings per call |
+| `byte_limit` | At most 1,048,576 bytes across those strings, including their terminating NULs |
+
+The inherited first-use behavior is preserved: immediately after initialization,
+`default/default` first in the list requires a new pair. After another successful
+first allocation it can reuse the seeded pair 0. The plan models this without
+advancing the session's first-use state. A failed actual allocation may advance
+that state, so replan after failures too.
+
+This is a snapshot, not a reservation. It assumes successful allocations in the
+supplied order with no intervening allocations, session changes or RGB opt-out.
+Even `fits=1` cannot guarantee library allocation, text validity, geometry,
+prepared-row storage or drawing success. An existing pair above a narrow path's
+limit makes that path fail preflight even when no new slots are needed.
+
+The query works while suspended and performs no curses allocation, drawing,
+presentation, input consumption or terminal negotiation. It does not change
+retained cells, styles, prepared rows or the pair cache. Temporary storage is
+bounded by one pointer per submitted string plus at most the byte budget for
+copies; deduplication sorts the temporary pointer array. It owns no persistent
+resources. Deletion and resizing still do not reclaim session pairs.
+
+The self-contained PTY fixture includes a synthetic 15,718-pair list, allocation
+prediction versus actual preparation, exhaustion, RGB opt-in, narrow writers,
+default-color failure, library allocation failure and session lifecycle. It is
+not a capture of the requesting application's painting or a speedup measurement.
 
 ### Runtime color information
 

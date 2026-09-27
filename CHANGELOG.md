@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.2 — 2026-09-27
+
+- Add experimental `colorplan` preflight for exact color-pair reuse, demand and
+  drawing-path limits without allocating pairs or changing terminal state.
+- Add experimental raster rectangle batches with material and top/bottom inverse
+  depth, preserving the existing two-triangle coverage and depth behavior.
+- Capture 102 Cinder Relay frames in a self-contained fixture. Compact batches
+  reduce the measured captured-input half-block pipeline time by 19–24%, including
+  Zsh argument construction; this is not a whole-game speedup. See the
+  [benchmark results](benchmarks/raster-rectangles-2026-09-27.md).
+- Document bounded APIs, resource limits and explicit stopping points. These
+  additions remain provisional and do not reopen the broader graphics roadmap.
+
+Validation: all 184 tests passed with the matching Zsh 5.9.2 build. The module
+manual builds successfully; rectangle and triangle terminal output matches in
+half-block, ASCII and monochrome modes. Zsh 5.8 remains covered by the separate
+CI job; it was not rerun locally for this release.
+
 ## 0.1.1 — 2026-09-17
 
 - Support native Zsh 5.8 builds: use build-patch context shared by both

@@ -33,6 +33,7 @@ xitem(tt(zdraw) tt(clear) var(targetwin) [ tt(redraw) | tt(eol) | tt(bot) ])
 xitem(tt(zdraw) tt(position) var(targetwin) var(array))
 xitem(tt(zdraw) tt(geometry) var(array))
 xitem(tt(zdraw) tt(colorinfo) var(association))
+xitem(tt(zdraw) tt(colorplan) var(association) tt(attr)|tt(bg)|tt(spans) [ var(fg/bg) ... ])
 xitem(tt(zdraw) tt(resourceinfo) var(association))
 xitem(tt(zdraw) tt(raster) var(operation) var(name) [ var(arguments) ... ])
 xitem(tt(zdraw) tt(textinfo) var(association) var(text) [ var(columns) [ var(policy) ] ])
@@ -423,6 +424,43 @@ use of tt(default/default) retains the existing allocation behavior.
 Capabilities reflect curses' terminal description, not a probe of the physical
 terminal.  Compiled support remains separately discoverable through
 tt(zdraw_features), including its tt(colorinfo) entry.
+
+The experimental subcommand tt(colorplan) inspects an ordered list of color-pair
+strings without allocating pairs. It requires an initialized session, works while
+suspended, and follows tt(colorinfo)'s output-parameter rules. Select tt(attr)
+for the full session pair range, tt(bg) for background drawing, or tt(spans) for
+span and prepared-row cell writers. Supply only foreground/background strings,
+in intended allocation order, excluding styles without colors, empty or fully
+clipped spans, and already-prepared rows. This is pair-budget preflight, not text,
+geometry, storage or complete frame validation.
+
+The report contains tt(requested), tt(unique), tt(pairs_reused), tt(pairs_needed),
+tt(pairs_used), tt(pairs_free), tt(pair_limit), tt(path_pair_limit), tt(max_pair),
+tt(fits), tt(request_limit) and tt(byte_limit). Reuse and demand count distinct
+spellings, including reuse of pair 0; their sum is tt(unique). Current session
+counts match tt(colorinfo). The highest required existing or prospective ID is
+tt(max_pair), or 0 for an empty list. It may exceed the limits. tt(fits) is 1 only
+when new demand fits the free slots and all required IDs fit the selected path.
+Different spellings remain distinct, including RGB case. RGB requires opt-in
+even on cache hits. The inherited first-use behavior is modeled: a first request
+for tt(default/default) allocates a nonzero pair, while a later request after
+another first allocation can reuse seeded pair 0. Inspection does not advance
+that state. Failed actual allocation may advance it; replan after failures.
+
+Status 0 means a report was assigned, even for tt(fits=0). Status 1 means invalid
+arguments, no session, invalid colors for the current session, exceeded request
+bounds or assignment failure. Status 2 means the selected writer or required
+color/default-color support is unavailable. Rejection preserves the destination.
+An empty list fits whenever the selected writer exists, even in monochrome.
+Each call accepts up to 65,536 strings totaling at most 1,048,576 bytes including
+terminating NULs. Temporary storage holds one pointer per string and bounded
+copies; no persistent resources are created.
+
+Plans do not reserve slots, approximate colors, recycle pairs, read input, draw,
+present, emit terminal output or change session state. They assume successful
+allocation in the supplied order without intervening allocations or session/RGB
+changes. Library allocation and drawing can still fail. An existing cached pair
+above a narrow path's limit does not fit even when no new slots are required.
 
 The subcommand tt(resourceinfo) creates or replaces an ordinary writable
 associative parameter, following tt(colorinfo)'s destination rules. It is available
@@ -1645,11 +1683,27 @@ Sampling uses pixel centers and inclusive barycentric weights of at least
 -0.000001; absolute double areas at most 0.000001 are degenerate. Inverse depth
 is affine in screen space. Only a strictly greater computed depth replaces the
 previous material. Equal computed depths keep the earlier pixel.)
+sitem(tt(rectangles) var(name) [ var(x0) var(y0) var(x1) var(y1) var(qtop) var(qbottom) var(material) ... ])(
+Submit axis-aligned rectangles with left/top and right/bottom coordinates and
+top/bottom inverse depths. Bounds must be ordered; both depths obey the positive
+triangle-depth limits. Each rectangle expands, in order, to triangles with
+vertices (x0,y0,qtop), (x1,y0,qtop), (x1,y1,qbottom), then (x0,y0,qtop),
+(x1,y1,qbottom), (x0,y1,qbottom), both with the supplied material. The diagonal
+is top-left to bottom-right; inverse depth is affine vertically and constant
+horizontally in exact arithmetic. The same triangle kernel preserves coverage,
+rounding, inclusive edges and depth ties; zero-size and tiny-area rectangles
+follow the triangle degeneracy rule. All arguments are validated even when
+offscreen or degenerate. At most 2048 rectangles are accepted per call, with
+both triangles' bounding-box visits charged to the unchanged work limit.
+Validation of the complete batch precedes pixel writes; an empty batch succeeds.
+This experimental operation saves shell submission/parsing work, not pixel
+visits. It adds no textures, independent corner depths or new persistent storage.)
 sitem(tt(read) var(name) var(array))(
 Replace an ordinary writable indexed array with row-major alternating material
 and depth values. This diagnostic path is not intended for frame presentation.)
 sitem(tt(info) var(name) var(association))(
-Report dimensions, palette size, byte accounting and limits. The format tag is
+Report dimensions, palette size, byte accounting and limits, including
+tt(rectangle_limit) for compact batches. The format tag is
 tt(zdraw-raster-experiment-1). Up to 32 live surfaces and 8 MiB of owned raster
 storage are permitted. Transient old and new resize buffers must fit that budget.
 Bounded per-call scratch, shell parameters and curses storage are additional.)
@@ -1703,6 +1757,7 @@ sitem(tt(cell_occupancy))(Optional conservative cell occupancy and style metadat
 sitem(tt(cell_inspection))(Structured readback of the current retained cell.)
 sitem(tt(wide_cell_inspection))(Complete stored complex-character text, including combining marks.)
 sitem(tt(colorinfo))(Runtime color information through tt(colorinfo).)
+sitem(tt(colorplan))(Experimental non-allocating color-pair budget preflight.)
 sitem(tt(resource_info))(Passive resource counts, budgets and prepared-row reuse
 through tt(resourceinfo).)
 sitem(tt(custom_borders))(The eight-character form of tt(border), including

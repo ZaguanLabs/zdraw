@@ -556,6 +556,33 @@ zdraw_pair_limit(void)
     return COLOR_PAIRS - 1 < SHRT_MAX ? COLOR_PAIRS - 1 : SHRT_MAX;
 }
 
+static int
+zdraw_bg_pair_limit(void)
+{
+    int limit = zdraw_pair_limit();
+#ifndef HAVE_SETCCHAR
+    if (limit > 255)
+        limit = 255;
+    if (limit > PAIR_NUMBER(A_COLOR))
+        limit = PAIR_NUMBER(A_COLOR);
+#endif
+    return limit;
+}
+
+/* -1 distinguishes an unavailable writer from a writer with no color slots. */
+static int
+zdraw_spans_pair_limit(void)
+{
+#ifdef ZDRAW_WIDE_SPANS
+    return zdraw_pair_limit();
+#elif defined(HAVE_WADDCHNSTR)
+    int limit = zdraw_pair_limit();
+    return limit < PAIR_NUMBER(A_COLOR) ? limit : PAIR_NUMBER(A_COLOR);
+#else
+    return -1;
+#endif
+}
+
 static Colorpairnode
 zdraw_colorget(const char *nam, char *colorpair)
 {
@@ -5360,21 +5387,11 @@ zccmd_colorinfo(const char *nam, char **args)
 		color_limit = colors <= (zlong)SHRT_MAX ? colors : (zlong)SHRT_MAX + 1;
 	    pair_limit = zdraw_pair_limit();
 	}
-	bg_limit = query_limit = pair_limit;
-#ifdef ZDRAW_WIDE_SPANS
-	spans_limit = pair_limit;
-#elif defined(HAVE_WADDCHNSTR)
-	spans_limit = pair_limit < PAIR_NUMBER(A_COLOR) ? pair_limit : PAIR_NUMBER(A_COLOR);
-#else
-	spans_limit = 0;
-#endif
-#ifndef HAVE_SETCCHAR
-	/* bg encodes the pair in chtype and also has a legacy 255 guard. */
-	if (bg_limit > 255)
-	    bg_limit = 255;
-	if (bg_limit > PAIR_NUMBER(A_COLOR))
-	    bg_limit = PAIR_NUMBER(A_COLOR);
-#endif
+	bg_limit = zdraw_bg_pair_limit();
+        spans_limit = zdraw_spans_pair_limit();
+        if (spans_limit < 0)
+            spans_limit = 0;
+        query_limit = pair_limit;
 #if !defined(HAVE_WIN_WCH) || !defined(HAVE_GETCCHAR)
 	if (query_limit > PAIR_NUMBER(A_COLOR))
 	    query_limit = PAIR_NUMBER(A_COLOR);
@@ -5402,6 +5419,124 @@ zccmd_colorinfo(const char *nam, char **args)
     zdraw_colorinfo_value(info, "pairs_free", initialized ? pair_limit - next_cp : -1);
 
     return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
+}
+
+
+#define ZDRAW_COLORPLAN_PAIRS 65536
+#define ZDRAW_COLORPLAN_BYTES 1048576
+
+static int
+zdraw_colorplan_compare(const void *a, const void *b)
+{
+    return strcmp(*(const char * const *)a, *(const char * const *)b);
+}
+
+/* Inspect the existing cache, never call colorget: even a failed colorget can
+ * advance the legacy first-use phase. Sorting only the borrowed pointers keeps
+ * temporary storage bounded and avoids quadratic duplicate detection. */
+static int
+zccmd_colorplan(const char *nam, char **args)
+{
+    int count = arrlen(args + 2), i, unique = 0, reused = 0, needed = 0;
+    int path_limit, limit = zdraw_pair_limit(), max_pair = 0;
+    size_t bytes = 0, length;
+    char **sorted, *p, *copy, *slash;
+    Colorpairnode pair;
+    LinkList info;
+
+    if (zdraw_association(nam, args[0]))
+        return 1;
+    if (!strcmp(args[1], "attr"))
+        path_limit = limit;
+    else if (!strcmp(args[1], "bg"))
+        path_limit = zdraw_bg_pair_limit();
+    else if (!strcmp(args[1], "spans"))
+        path_limit = zdraw_spans_pair_limit();
+    else {
+        zwarnnam(nam, "colorplan expects attr, bg or spans");
+        return 1;
+    }
+    if (count > ZDRAW_COLORPLAN_PAIRS)
+        goto invalid;
+    /* Bound scanning as well as copied strings, including terminating NULs. */
+    for (i = 0; i < count; i++) {
+        for (p = args[i + 2]; *p; p++)
+            if (++bytes > ZDRAW_COLORPLAN_BYTES)
+                goto invalid;
+        if (++bytes > ZDRAW_COLORPLAN_BYTES)
+            goto invalid;
+    }
+    if (path_limit < 0)
+        return 2;
+    sorted = (char **)zhalloc((size_t)(count ? count : 1) * sizeof(*sorted));
+    for (i = 0; i < count; i++)
+        sorted[i] = args[i + 2];
+    qsort(sorted, count, sizeof(*sorted), zdraw_colorplan_compare);
+    for (i = 0; i < count; i++) {
+        int f, b;
+        if (i && !strcmp(sorted[i], sorted[i - 1]))
+            continue;
+        unique++;
+        if (!zc_truecolor && strchr(sorted[i], '#'))
+            goto invalid;
+        pair = zdraw_colorpairs ?
+            (Colorpairnode)gethashnode2(zdraw_colorpairs, sorted[i]) : NULL;
+        /* The first successful colorget bypasses even the seeded pair 0.
+         * Later default/default requests can reuse 0 if another pair was first. */
+        if (zc_color_phase == 1 && !strcmp(sorted[i], args[2]))
+            pair = NULL;
+        /* Span styles validate colors even on a cache hit; attr/bg retain
+         * their older cache-first behavior (notably for seeded pair zero). */
+        if (pair && strcmp(args[1], "spans")) {
+            reused++;
+            if (pair->colorpair > max_pair)
+                max_pair = pair->colorpair;
+            continue;
+        }
+        length = strlen(sorted[i]);
+        copy = (char *)zhalloc(length + 1);
+        memcpy(copy, sorted[i], length + 1);
+        slash = strchr(copy, '/');
+        if (!slash)
+            goto invalid;
+        *slash = '\0';
+        f = zdraw_color(copy);
+        b = zdraw_color(slash + 1);
+        if (f == -2 || b == -2)
+            goto invalid;
+        if (!zdraw_colorpairs)
+            return 2;
+        if (pair) {
+            reused++;
+            if (pair->colorpair > max_pair)
+                max_pair = pair->colorpair;
+        } else {
+            if ((f < 0 || b < 0) && !zc_default_colors)
+                return 2;
+            if (f >= COLORS || b >= COLORS)
+                return 2;
+            needed++;
+        }
+    }
+    if (needed && next_cp + needed > max_pair)
+        max_pair = next_cp + needed;
+    info = newlinklist();
+    zdraw_colorinfo_value(info, "requested", count);
+    zdraw_colorinfo_value(info, "unique", unique);
+    zdraw_colorinfo_value(info, "pairs_reused", reused);
+    zdraw_colorinfo_value(info, "pairs_needed", needed);
+    zdraw_colorinfo_value(info, "pairs_used", next_cp);
+    zdraw_colorinfo_value(info, "pairs_free", limit - next_cp);
+    zdraw_colorinfo_value(info, "pair_limit", limit);
+    zdraw_colorinfo_value(info, "path_pair_limit", path_limit);
+    zdraw_colorinfo_value(info, "max_pair", max_pair);
+    zdraw_colorinfo_value(info, "fits", needed <= limit - next_cp && max_pair <= path_limit);
+    zdraw_colorinfo_value(info, "request_limit", ZDRAW_COLORPLAN_PAIRS);
+    zdraw_colorinfo_value(info, "byte_limit", ZDRAW_COLORPLAN_BYTES);
+    return !sethparam(args[0], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
+invalid:
+    zwarnnam(nam, "colorplan: invalid color pair or request budget exceeded");
+    return 1;
 }
 
 
@@ -5922,6 +6057,7 @@ bin_zdraw(char *nam, char **args, UNUSED(Options ops), UNUSED(int func))
 	{"position", zccmd_position, 2, 2},
 	{"geometry", zccmd_geometry, 1, 1},
 	{"colorinfo", zccmd_colorinfo, 1, 1},
+        {"colorplan", zccmd_colorplan, 2, -1},
         {"resourceinfo", zccmd_resourceinfo, 1, 1},
         {"raster", zccmd_raster, 2, -1},
 	{"textinfo", zccmd_textinfo, 2, 4},
@@ -5993,7 +6129,8 @@ bin_zdraw(char *nam, char **args, UNUSED(Options ops), UNUSED(int func))
         zcsc->cmd != zccmd_suspend && zcsc->cmd != zccmd_endwin &&
         zcsc->cmd != zccmd_capabilities && zcsc->cmd != zccmd_resourceinfo &&
         zcsc->cmd != zccmd_inputinfo && zcsc->cmd != zccmd_geometry &&
-        zcsc->cmd != zccmd_colorinfo && zcsc->cmd != zccmd_textinfo &&
+        zcsc->cmd != zccmd_colorinfo && zcsc->cmd != zccmd_colorplan &&
+        zcsc->cmd != zccmd_textinfo &&
         zcsc->cmd != zccmd_textpos && zcsc->cmd != zccmd_textpolicy &&
         zcsc->cmd != zccmd_textwrap) {
         zwarnnam(nam, "resume the suspended session first");
@@ -6064,6 +6201,7 @@ zdraw_featuresgetfn(UNUSED(Param pm))
      * This is compile-time support, not terminal capability or state. */
     static char *features[] = {
 	"colorinfo",
+        "colorplan",
         "resource_info",
         "cell_inspection",
         "window_snapshots",

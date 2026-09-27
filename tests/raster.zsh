@@ -10,12 +10,16 @@ reject() { "$@" 2>/dev/null && fail "unexpected success: $*"; return 0; }
 typeset -a cell before after
 typeset -A info saved
 check zdraw raster create s 4 3 0 ' ' 1 '#'
-check zdraw raster clear s 1 0
+check zdraw raster clear s 0
+check zdraw raster rectangles s 0 0 4 1 1 1 1
 reject zdraw raster blit s stdscr 0 0 mono
 check zdraw init
 {
   check zdraw addwin sample 3 6 1 1
   check zdraw move sample 2 5
+  check zdraw suspend
+  reject zdraw raster rectangles s 0 0 4 3 1 1 0
+  check zdraw resume
   check zdraw position sample before
   if [[ $mode == unavailable ]]; then
     zdraw raster blit s sample 0 0 mono
@@ -68,6 +72,7 @@ check zdraw init
     check zdraw stage sample
     check zdraw present
     check zdraw raster resize s 2 2
+    check zdraw raster rectangles s 0 0 2 2 1 1 1
     check zdraw resizewin sample 2 3
     check zdraw raster blit s sample 0 0 mono
   fi

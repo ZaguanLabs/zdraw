@@ -19,6 +19,7 @@ zdraw raster create NAME WIDTH HEIGHT COLOR ASCII [COLOR ASCII ...]
 zdraw raster clear NAME MATERIAL [LOWER_MATERIAL]
 zdraw raster resize NAME WIDTH HEIGHT
 zdraw raster triangles NAME [X0 Y0 Q0 X1 Y1 Q1 X2 Y2 Q2 MATERIAL ...]
+zdraw raster rectangles NAME [X0 Y0 X1 Y1 QTOP QBOTTOM MATERIAL ...]
 zdraw raster read NAME ARRAY
 zdraw raster info NAME ASSOCIATION
 zdraw raster blit NAME WINDOW ROW COLUMN half|ascii|mono
@@ -68,6 +69,46 @@ This is deterministic for a given build/input, not a cross-platform bitwise
 floating-point promise. The original Zsh reference rounds locals to eight
 decimal places; comparisons therefore require exact materials and allow
 2e-6 absolute/relative depth error for that reference.
+
+### Rectangle batches
+
+Authorized as a bounded follow-up on 2026-09-27, `rectangles` takes seven words
+per axis-aligned rectangle: left, top, right, bottom, top inverse depth, bottom
+inverse depth and material ID. The bounds must satisfy `X0 <= X1`, `Y0 <= Y1`;
+reversed bounds fail. Both depths must be positive and at most 1,000,000. All
+numeric syntax, coordinate and palette limits match `triangles`. Constant depth
+uses the same value twice. No perspective transforms or texture sampling occur.
+
+Each rectangle is exactly these two triangles, submitted in this order:
+
+```text
+X0 Y0 QTOP  X1 Y0 QTOP     X1 Y1 QBOTTOM  MATERIAL
+X0 Y0 QTOP  X1 Y1 QBOTTOM  X0 Y1 QBOTTOM  MATERIAL
+```
+
+The diagonal runs from top-left to bottom-right. Inverse depth is affine from
+top to bottom, constant horizontally in exact arithmetic. The implementation
+uses the same barycentric calculations, traversal and rounding as the expanded
+triangles, including inclusive edges, tolerance and strict depth comparison.
+It does not introduce a half-open rectangle convention. Zero-width/height and
+other rectangles with double triangle area at most 0.000001 draw nothing;
+their arguments are still validated. Offscreen rectangles are clipped by the
+existing traversal. Rectangle and triangle calls accumulate on the same surface.
+
+At most **2,048 rectangles** are accepted per call. Both expanded triangles'
+clipped bounding-box visits count against the unchanged **16,777,216** work
+limit. The entire batch is validated before any pixels change; empty batches
+succeed without changes. Temporary storage is at most 4,096 parsed triangle
+records, with no new persistent resource. Invalid requests return 1; headless
+operation, suspend rejection and cleanup follow the existing raster contract.
+`info[rectangle_limit]` reports the rectangle-count bound; the format tag remains
+`zdraw-raster-experiment-1` with this additional key.
+
+This is compact submission through the existing rasterizer, reducing shell
+words from 20 to 7 per rectangle. It does not reduce native pixel visits.
+The [Cinder Relay fixture and measurements](../benchmarks/raster-rectangles-2026-09-27.md)
+compare both paths, including shell argument construction. Four independent
+corner depths, rotated rectangles and textures are outside this experiment.
 
 `read` replaces an ordinary writable indexed array with row-major alternating
 material/depth values (two elements per pixel). It is a diagnostic path, outside
@@ -123,6 +164,7 @@ window unchanged. Pair pressure is visible through `colorinfo` and
 | Live surfaces | 32 |
 | Palette | 1..32 entries |
 | Triangles per call | 4,096 |
+| Rectangles per call | 2,048, expanded into two triangles each |
 | Sum of clipped bounding-box pixel visits per batch | 16,777,216 |
 | Owned raster storage across all surfaces | 8 MiB |
 

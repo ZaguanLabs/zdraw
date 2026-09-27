@@ -9,6 +9,7 @@
 #define ZDRAW_RASTER_PALETTE 32
 #define ZDRAW_RASTER_SURFACES 32
 #define ZDRAW_RASTER_TRIANGLES 4096
+#define ZDRAW_RASTER_RECTANGLES (ZDRAW_RASTER_TRIANGLES / 2)
 #define ZDRAW_RASTER_WORK 16777216
 
 struct zdraw_raster {
@@ -224,6 +225,51 @@ zdraw_raster_batch(struct zdraw_raster *s, char **args, int nargs)
     return 0;
 }
 
+/* Compact, axis-aligned input with the exact same two-triangle traversal.
+ * Fixed diagonal: top-left -> bottom-right; first TL/TR/BR, then TL/BR/BL.
+ * Keeping the triangle kernel preserves inclusive edges and rounding at depth
+ * ties. This operation reduces submission/parsing work, not pixel visits. */
+static int
+zdraw_raster_rectangles(struct zdraw_raster *s, char **args, int nargs)
+{
+    struct zdraw_triangle *batch, *t;
+    double v[6];
+    size_t work = 0, area;
+    int count, i, j, material;
+    if (nargs % 7 || nargs / 7 > ZDRAW_RASTER_RECTANGLES) return 1;
+    count = nargs / 7;
+    batch = (struct zdraw_triangle *)zhalloc((size_t)count * 2 * sizeof(*batch));
+    for (i = 0; i < count; i++, args += 7) {
+        for (j = 0; j < 6; j++)
+            if (zdraw_raster_number(args[j], v + j, j < 4 ? 32768 : 1000000) ||
+                (j >= 4 && v[j] <= 0)) return 1;
+        if (v[0] > v[2] || v[1] > v[3] ||
+            zdraw_nonnegative(args[6], &material) || material >= s->colors)
+            return 1;
+        t = batch + i * 2;
+        t[0].x[0] = t[1].x[0] = v[0];
+        t[0].y[0] = t[1].y[0] = v[1];
+        t[0].q[0] = t[1].q[0] = v[4];
+        t[0].x[1] = v[2]; t[0].y[1] = v[1]; t[0].q[1] = v[4];
+        t[0].x[2] = t[1].x[1] = v[2];
+        t[0].y[2] = t[1].y[1] = v[3];
+        t[0].q[2] = t[1].q[1] = v[5];
+        t[1].x[2] = v[0]; t[1].y[2] = v[3]; t[1].q[2] = v[5];
+        for (j = 0; j < 2; j++) {
+            t[j].material = material;
+            zdraw_raster_bounds(s, t + j);
+            if (t[j].left <= t[j].right && t[j].top <= t[j].bottom) {
+                area = (size_t)(t[j].right-t[j].left+1)*(t[j].bottom-t[j].top+1);
+                if (area > ZDRAW_RASTER_WORK - work) return 1;
+                work += area;
+            }
+        }
+    }
+    /* The complete batch, including both triangles' work, passed validation. */
+    for (i = 0; i < count * 2; i++) zdraw_raster_triangle(s, batch + i);
+    return 0;
+}
+
 static int
 zdraw_raster_read(const char *nam, struct zdraw_raster *s, char *target)
 {
@@ -399,6 +445,10 @@ zccmd_raster(const char *nam, char **args)
         if (zdraw_raster_batch(s, args+2, nargs-2)) goto invalid;
         return 0;
     }
+    if (!strcmp(args[0], "rectangles")) {
+        if (zdraw_raster_rectangles(s, args+2, nargs-2)) goto invalid;
+        return 0;
+    }
     if (!strcmp(args[0], "read") && nargs == 3)
         return zdraw_raster_read(nam, s, args[2]);
     if (!strcmp(args[0], "blit") && nargs == 6)
@@ -416,6 +466,7 @@ zccmd_raster(const char *nam, char **args)
         zdraw_colorinfo_value(info, "pixel_limit", ZDRAW_RASTER_PIXELS);
         zdraw_colorinfo_value(info, "dimension_limit", ZDRAW_RASTER_DIMENSION);
         zdraw_colorinfo_value(info, "triangle_limit", ZDRAW_RASTER_TRIANGLES);
+        zdraw_colorinfo_value(info, "rectangle_limit", ZDRAW_RASTER_RECTANGLES);
         zdraw_colorinfo_value(info, "work_limit", ZDRAW_RASTER_WORK);
         return !sethparam(args[2], zdraw_list_array(info)) || (errflag & ERRFLAG_ERROR);
     }

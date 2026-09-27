@@ -174,13 +174,14 @@ class FeatureTests(unittest.TestCase):
                 zdraw resourceinfo resources || exit 20
                 [[ $resources[windows] == 0 && $resources[prepared_rows] == 0 &&
                    $resources[prepared_byte_limit] == unknown ]] || exit 21
-                (( ${#zdraw_features} == 15 + (${zdraw_features[(Ie)grapheme_boundaries]} > 0) + (${zdraw_features[(Ie)wide_cell_inspection]} > 0) + (${zdraw_features[(Ie)resize_events]} > 0) + (${zdraw_features[(Ie)wide_text]} > 0) + (${zdraw_features[(Ie)wide_events]} > 0) &&
+                (( ${#zdraw_features} == 16 + (${zdraw_features[(Ie)grapheme_boundaries]} > 0) + (${zdraw_features[(Ie)wide_cell_inspection]} > 0) + (${zdraw_features[(Ie)resize_events]} > 0) + (${zdraw_features[(Ie)wide_text]} > 0) + (${zdraw_features[(Ie)wide_events]} > 0) &&
                    ${zdraw_features[(Ie)textinfo]} &&
                    ${zdraw_features[(Ie)text_positions]} &&
                    ${zdraw_features[(Ie)text_wrapping]} &&
                    ${zdraw_features[(Ie)structured_events]} &&
                    ${zdraw_features[(Ie)custom_borders]} &&
                    ${zdraw_features[(Ie)colorinfo]} &&
+                   ${zdraw_features[(Ie)colorplan]} &&
                    ${zdraw_features[(Ie)cell_inspection]} &&
                    ${zdraw_features[(Ie)window_snapshots]} )) || exit 3
                 (( ! ${zdraw_colors[(Ie)default]} )) || exit 4
