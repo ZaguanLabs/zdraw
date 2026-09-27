@@ -298,3 +298,32 @@ python3 scripts/capture-raster-rectangles.py --source /path/to/cinder-relay \
 ```
 
 Normal tests and benchmarks need only the committed fixture, not game sources.
+
+## RGB raster and finished painting presentation
+
+```sh
+python3 benchmarks/raster-rgb.py --trials 3
+```
+
+This uses the self-contained Alpine Vigil fixture: a fresh 750×396 painting
+built from native triangles, 6,854 colors and 15,718 session pairs including the
+background. It compares the captured v0.1.2 presenter against RGB surface
+half-block packing, requiring byte-identical PTY output. Setup/import, native
+packing (including pair preflight), and presentation are timed separately.
+Importing an already completed painting back into native triangles is deliberately
+charged to setup; this adapter is not an end-to-end optimization. See
+[raster-rgb-2026-09-27.md](raster-rgb-2026-09-27.md) for results and limitations.
+
+The reference presenter is captured in `alpine-view-reference.zsh`; its only
+change is using the shell's fractional `SECONDS` clock instead of the optional
+`zsh/datetime` module. Geometry tiles from sky, mountain and foreground are also
+included for depth-independence tests. An optional fresh capture accepts an
+explicit application source tree, runs its geometry and effects, and writes no
+application cache or source files:
+
+```sh
+python3 benchmarks/capture-raster-rgb.py --source /path/to/alpine-vigil \
+  --output .build/alpine-rgb.json.gz
+```
+
+Normal builds, tests and benchmarks do not access that application tree.

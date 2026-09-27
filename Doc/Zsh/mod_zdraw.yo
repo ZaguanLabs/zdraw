@@ -1655,7 +1655,7 @@ subsect(Experimental raster surfaces)
 
 The tt(raster) subcommand is a bounded R1/R2 experiment, not a supported graphics
 API. Its interface may change or be removed. Loading the module does not allocate
-raster resources. Except for tt(blit), its operations work without tt(init), a
+raster resources. Except for tt(blit) and tt(plan), its operations work without tt(init), a
 terminal, output or input reads. All raster operations are rejected during a
 suspended terminal session. The operations are:
 
@@ -1666,6 +1666,38 @@ zero. Each color is a decimal terminal index in 0 to 255; each fallback characte
 is one printable ASCII byte. Names are identifiers of at most 64 bytes, without
 subscripts. Duplicate names fail. Dimensions are 1 to 512, with at most 65536
 pixels per surface. Pixels initially contain material zero and inverse depth zero.)
+sitem(tt(create-rgb) var(name) var(width) var(height) var(rgb) var(ascii) [ var(rgb) var(ascii) ... ])(
+Create an RGB surface with the same bounds as tt(create). Colors are quoted
+seven-byte tt(#RRGGBB) values, in either case. Each pixel stores independent RGB,
+material and depth. Storage accepts all 24-bit values without a terminal.
+Clear, resize, ordinary triangles and rectangles use the material's flat RGB.)
+sitem(tt(triangles-rgb) var(name) [ var(x0) var(y0) var(q0) var(rgb0) var(x1) var(y1) var(q1) var(rgb1) var(x2) var(y2) var(q2) var(rgb2) var(material) ... ])(
+Submit RGB triangles, only on RGB surfaces, with the same coverage, depth,
+validation and work limits as tt(triangles). The 13-word record supplies a color
+per vertex; the material selects the fallback glyph. RGB channels interpolate
+affinely in display-encoded space, without gamma or perspective correction,
+clamp to 0..255 and round to nearest, half upward. Depth remains independent.
+There is no blending; equal computed depths retain the previous pixel.)
+sitem(tt(resolve) var(source) var(new_name) var(width) var(height))(
+Create a new RGB surface using an area-weighted box filter over the RGB source.
+Dimensions must not exceed the source; noninteger scale ratios are supported.
+Integer overlap weights average display-encoded channels, rounding nearest,
+half upward. Output depth is zero; material comes from the footprint center
+(right/bottom on a boundary). The palette is copied. The new name must not
+exist and both surfaces must fit resource limits. No styles or windows change.)
+sitem(tt(read-rgb) var(name) var(array))(
+Like tt(read), but returns alternating canonical tt(#rrggbb) and depth values.
+Only RGB surfaces are accepted.)
+sitem(tt(plan) var(name) var(association) [ var(other_name) ... ])(
+Preflight the union of half-block RGB pairs from up to 32 RGB surfaces and
+262144 total cells, without allocating pairs or changing pixels. Requires an
+initialized truecolor session. Report tt(requested), tt(unique),
+tt(pairs_reused), tt(pairs_needed), tt(pairs_used), tt(pairs_free),
+tt(pair_limit), tt(path_pair_limit), tt(max_pair), tt(fits), tt(request_limit).
+Status 0 means reporting succeeded, even with tt(fits=0); unsupported output
+returns 2, invalid input 1. Repeated surfaces count toward the cell bound.
+This snapshot reserves nothing and checks neither window bounds nor half-block
+locale width. Other frame content needs separate accounting.)
 sitem(tt(clear) var(name) var(material) [ var(lower_material) ])(
 Reset depths to zero and fill materials. The optional second material applies to
 rows beginning at height divided by two, rounded down.)
@@ -1703,7 +1735,8 @@ Replace an ordinary writable indexed array with row-major alternating material
 and depth values. This diagnostic path is not intended for frame presentation.)
 sitem(tt(info) var(name) var(association))(
 Report dimensions, palette size, byte accounting and limits, including
-tt(rectangle_limit) for compact batches. The format tag is
+tt(rectangle_limit) for compact batches and tt(rgb), 1 for RGB surfaces and 0
+for indexed surfaces. The format tag is
 tt(zdraw-raster-experiment-1). Up to 32 live surfaces and 8 MiB of owned raster
 storage are permitted. Transient old and new resize buffers must fit that budget.
 Bounded per-call scratch, shell parameters and curses storage are additional.)
@@ -1719,7 +1752,13 @@ rectangle is compiled before window writes; a later curses write failure can
 partially change retained cells. Cursor, background and attributes are preserved.
 No input is read or presentation performed. Use tt(stage) or tt(viewport), then
 tt(present). Pairs use the immutable session cache and are never recycled while
-retained cells could refer to them.)
+retained cells could refer to them.
+RGB surfaces use actual pixel colors and canonical lowercase pair names.
+Color modes require explicit tt(truecolor on); reserved or unsupported RGB
+values return 2, without approximation. RGB blits preflight all pairs before
+allocating; budget failure returns 1 without allocating pairs or changing
+cells. Unexpected library allocation failures may still retain earlier pairs.
+Mono uses the material glyph with pair zero, including on non-RGB terminals.)
 sitem(tt(free) var(name))(
 Release the surface without changing previously drawn cells. tt(end) and module
 unload release all raster surfaces, including surfaces created headlessly.)

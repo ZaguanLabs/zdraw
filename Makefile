@@ -16,6 +16,9 @@ test: build
 	"$(ZSH_BIN)" -dfn examples/held-keys.zsh
 	"$(ZSH_BIN)" -dfn tests/held-keys.zsh
 	"$(ZSH_BIN)" -dfn tests/raster.zsh
+	"$(ZSH_BIN)" -dfn tests/raster-rgb.zsh
+	"$(ZSH_BIN)" -dfn benchmarks/raster-rgb.zsh
+	"$(ZSH_BIN)" -dfn benchmarks/alpine-view-reference.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/raster.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/raster-rectangles.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/raster-reference.zsh

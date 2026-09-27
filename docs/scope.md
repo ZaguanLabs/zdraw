@@ -28,6 +28,23 @@ remain bounded ways to display data; they are not a route into image rendering.
 
 ## The hard stop
 
+### Bounded exception: RGB raster and box resolve, 2026-09-27
+
+After the rectangle experiment, the maintainer explicitly approved the next
+bounded task: independent RGB raster colors, affine vertex-color interpolation,
+box resolve, and exact RGB half-block packing with frame pair preflight. The
+application evidence is Alpine Vigil's depth-encoded pigment/light workaround
+and measured shell row preparation. A fresh, self-contained capture supports
+correctness checks and comparison with its v0.1.2 presenter.
+
+The [RGB contract](raster-experiment.md#rgb-surfaces-and-resolve) fixes storage,
+color space, rounding, resource bounds and explicit presentation. This remains
+experimental. It authorizes no alpha, textures, image file ingestion, terminal
+image protocols, approximation policy, pair recycling or application-specific
+lighting/filter logic. The [measurements](../benchmarks/raster-rgb-2026-09-27.md)
+separate import/setup from presentation and do not claim to replace the painting's
+entire build. The general stop line and supported-promotion quality bar remain.
+
 ### Bounded exception: raster rectangle batches, 2026-09-27
 
 The maintainer approved the next bounded experiment after color-pair preflight:

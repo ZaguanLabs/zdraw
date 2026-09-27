@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.3 — 2026-09-27
+
+- Add experimental RGB raster materials and affine per-vertex RGB interpolation,
+  with inverse depth stored independently.
+- Add bounded area-box resolve into a new RGB surface, exact half-block/ASCII
+  packing, and non-allocating aggregate pair preflight. Presentation remains
+  explicit; monochrome uses material fallback glyphs.
+- Capture Alpine Vigil geometry and its finished painting for standalone tests
+  and [presentation measurements](benchmarks/raster-rgb-2026-09-27.md). Import
+  cost is reported separately; these measurements are not a whole-build speedup.
+- Specify encoded RGB interpolation, exact box rounding, zero resolved depth,
+  output capability failures, ownership, and the experiment's stopping point.
+
+Validation: all 190 tests passed with matching Zsh 5.9.2; the module manual
+builds successfully. All six painting benchmark streams are byte-identical.
+
 ## 0.1.2 — 2026-09-27
 
 - Add experimental `colorplan` preflight for exact color-pair reuse, demand and

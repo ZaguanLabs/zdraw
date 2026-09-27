@@ -1,0 +1,86 @@
+{
+  "platform": "Linux-6.18.44-desktop-1.mga10-x86_64-with-glibc2.42",
+  "shell": "zsh 5.9.2 (x86_64-pc-linux-gnu)",
+  "fixture_sha256": "a64a1006701a365b62b785f739fe6c1a3cccf880093861360fb1323fa3133bb5",
+  "source_sha256": {
+    "Src/Modules/zdraw_raster.h": "9cf63ba0e5c1ed92b34d7dccfdef0d6f34825c8f02b389e9c2b8ff975f14444e",
+    "benchmarks/raster-rgb.zsh": "f3e6c105459266de2ff3b8cf63b2c4291d36c5a50ee2e426e39c2847d0266114",
+    "benchmarks/alpine-view-reference.zsh": "c0de7db5cc4125c78aa72e20f96ab3f84b4ac17a35ef5fe00247c91fa66d1f78"
+  },
+  "ppm_sha256": "832845349458f36f5e3ad6d9705bac40b031fe37a19a52a8cec76fda6773d68a",
+  "note": "Fresh session per trial. Identical PTY output required. Setup imports final geometry pixels and is excluded from frame timing. Application build/effects/quantization and emulator painting excluded.",
+  "results": [
+    {
+      "setup_ms": 463.67,
+      "pack_ms": 1963.271,
+      "present_ms": 56.205999999999996,
+      "frame_ms": 2019.477,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "reference",
+      "mode": "half",
+      "trial": 0
+    },
+    {
+      "setup_ms": 4443.741,
+      "pack_ms": 66.326,
+      "present_ms": 52.542,
+      "frame_ms": 118.86800000000086,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "native",
+      "mode": "half",
+      "trial": 0
+    },
+    {
+      "setup_ms": 4360.574,
+      "pack_ms": 65.592,
+      "present_ms": 52.873000000000005,
+      "frame_ms": 118.4649999999996,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "native",
+      "mode": "half",
+      "trial": 1
+    },
+    {
+      "setup_ms": 465.91900000000004,
+      "pack_ms": 1938.031,
+      "present_ms": 55.403,
+      "frame_ms": 1993.4340000000002,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "reference",
+      "mode": "half",
+      "trial": 1
+    },
+    {
+      "setup_ms": 472.55,
+      "pack_ms": 1952.25,
+      "present_ms": 55.492,
+      "frame_ms": 2007.7420000000004,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "reference",
+      "mode": "half",
+      "trial": 2
+    },
+    {
+      "setup_ms": 4353.116,
+      "pack_ms": 68.828,
+      "present_ms": 53.925,
+      "frame_ms": 122.75300000000033,
+      "frames": 1,
+      "output_bytes": 2662997,
+      "output_sha256": "ea8666debc94dd7b4a72057bef8eb5024c4dbbbb453c45c8b1d277cf278f5b2d",
+      "backend": "native",
+      "mode": "half",
+      "trial": 2
+    }
+  ]
+}

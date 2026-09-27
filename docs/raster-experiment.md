@@ -10,12 +10,17 @@ scaled text, camera math, scene graphs, game state, input changes or scheduling.
 ## Contract
 
 All operations are under `zdraw raster`. Merely loading the module allocates no
-surfaces. Except `blit`, these operations work headlessly without `zdraw init`,
+surfaces. Except `blit` and `plan`, these operations work headlessly without `zdraw init`,
 terminal discovery, output or input reads. A suspended terminal session rejects
 raster operations until resumed, consistent with other drawing commands.
 
 ```text
 zdraw raster create NAME WIDTH HEIGHT COLOR ASCII [COLOR ASCII ...]
+zdraw raster create-rgb NAME WIDTH HEIGHT #RGB ASCII [#RGB ASCII ...]
+zdraw raster triangles-rgb NAME [X0 Y0 Q0 #RGB0 X1 Y1 Q1 #RGB1 X2 Y2 Q2 #RGB2 MATERIAL ...]
+zdraw raster resolve SOURCE NEW_NAME WIDTH HEIGHT
+zdraw raster read-rgb NAME ARRAY
+zdraw raster plan NAME ASSOCIATION [OTHER_NAME ...]
 zdraw raster clear NAME MATERIAL [LOWER_MATERIAL]
 zdraw raster resize NAME WIDTH HEIGHT
 zdraw raster triangles NAME [X0 Y0 Q0 X1 Y1 Q1 X2 Y2 Q2 MATERIAL ...]
@@ -156,6 +161,102 @@ allocation failure can leave earlier pairs allocated, but leaves the target
 window unchanged. Pair pressure is visible through `colorinfo` and
 `resourceinfo`. Repeated frames reuse the surface's pair lookup table.
 
+## RGB surfaces and resolve
+
+The 2026-09-27 bounded extension is experimental. `create-rgb` uses the same
+names, dimensions and 1..32 material slots as `create`, with colors written as
+exactly `#RRGGBB` (either case). Quote shell arguments containing `#`. Storage
+accepts the entire 24-bit range without a terminal or truecolor opt-in. Each
+pixel has an independent RGB value, material ID and double inverse depth.
+`info` adds `rgb=1` for these surfaces (`0` for indexed surfaces); its existing
+format tag is unchanged.
+
+`clear`, `resize`, ordinary `triangles`, and `rectangles` assign the selected
+material's flat RGB. `triangles-rgb` accepts **13 words per triangle**, only on
+RGB surfaces. Each vertex supplies its own color; the final material selects
+only the ASCII/mono fallback glyph. Coverage, clipping, inverse-depth testing,
+whole-batch validation and work limits are exactly those of `triangles`. Color
+never modifies depth. All three channels interpolate affinely in screen space
+in **display-encoded RGB**, without gamma linearization or perspective
+correction. Each winning sample clamps to 0..255 and rounds to nearest integer,
+with half values rounded upward. Shared-edge tolerance may require clamping.
+There is no alpha or blending. Equal computed depths retain the earlier RGB,
+material and depth together.
+
+`read` retains its material/depth pairs. `read-rgb` instead returns row-major
+`#rrggbb DEPTH` pairs, only for RGB surfaces, with the same writable-array rules.
+These are diagnostic readbacks, not a required presentation step.
+
+`resolve SOURCE NEW_NAME WIDTH HEIGHT` creates a **new RGB surface**. Each output
+pixel averages the source pixels overlapped by its exact rectangular footprint,
+weighted by covered area. This is an area box filter, including noninteger
+scale ratios. Dimensions must be positive and no larger than the source; equal
+sizes make a color copy. Summation uses integer overlap units and rounds each
+channel to nearest with half values upward. It uses display-encoded RGB and
+performs no gamma conversion, edge sharpening, atmospheric effect or
+quantization. Output depth is **zero**: an averaged pixel has no single scene
+depth. Its material/glyph comes from the pixel containing the footprint's center
+(the right/bottom pixel on an exact boundary). The palette is copied unchanged.
+
+The destination must not exist, including the source name. Existing pixels and
+resources survive rejected operations. Source plus destination must fit the
+ordinary owned-byte and surface limits. Resolve visits fewer than four times
+the source pixel count, uses no unbounded kernel or readback, and never allocates
+styles or changes windows. Tile users must align footprint boundaries if they
+need the same result as a whole-canvas resolve.
+
+For example, after initializing a compatible direct-color terminal:
+
+```zsh
+zdraw truecolor on
+zdraw raster create-rgb scene 32 24 '#102030' '.'
+zdraw raster triangles-rgb scene \
+  0 0 1 '#ff8844' 32 0 2 '#4488ff' 16 24 1 '#88ff44' 0
+zdraw raster resolve scene small 16 12
+zdraw raster plan small frame
+if (( frame[fits] )); then
+  zdraw raster blit small stdscr 0 0 half
+  zdraw stage stdscr
+  zdraw present
+fi
+zdraw raster free small
+zdraw raster free scene
+```
+
+RGB `blit ... half` uses the actual upper/lower RGB values, emitting a space
+when they match and `▀` otherwise. A missing lower pixel uses palette zero.
+For tiled half-block output, use even pixel heights for all nonfinal tile rows
+so each vertical pair stays within its surface. `ascii` uses the upper pixel's fallback glyph and RGB with palette-zero
+background; `mono` uses its fallback glyph and pair zero. Color modes require
+explicit `zdraw truecolor on`, the existing compatible direct-color terminfo,
+and the appropriate cell writer. Unrepresentable reserved RGB values (for
+example `#000000` with xterm-direct's ANSI reservation) return **2**; they are
+never silently clamped. Monochrome remains available without RGB support.
+
+Before any RGB color blit allocates pairs or changes cells, it checks its entire
+rectangle against both session and writer limits. Pair-budget failure returns
+**1** with no new pairs or changed cells. Unexpected curses allocation errors
+can still retain earlier allocated pairs, and a later row-write error may
+partially change cells, as with existing spans. No operation recycles pair IDs.
+RGB names are canonical lowercase `#rrggbb/#rrggbb`; reuse follows the existing
+spelling-sensitive session cache.
+
+`plan NAME ASSOCIATION [OTHER_NAME ...]` performs the same non-allocating exact
+check for the **union of half-block pairs** of up to 32 RGB surfaces. It requires
+an initialized truecolor session, accepts at most 262,144 total terminal cells,
+and reports `requested`, `unique`, `pairs_reused`, `pairs_needed`, `pairs_used`,
+`pairs_free`, `pair_limit`, `path_pair_limit`, `max_pair`, `fits`, and
+`request_limit`. Successful reporting returns 0 even when `fits=0`; unsupported
+RGB/writer capability returns 2. Invalid inputs return 1 without replacing the
+association. Repeated surfaces count toward the cell bound but their pairs are
+deduplicated. This is a snapshot, not a reservation: later drawing can consume
+its budget. It does not validate window geometry, locale half-block width, or
+other frame content; allocate/preflight that content separately. Applications
+choose whether and how to approximate a frame that does not fit.
+
+The captured painting benchmark and its phase boundaries are recorded in
+[the RGB measurements](../benchmarks/raster-rgb-2026-09-27.md).
+
 ## Bounds and ownership
 
 | Resource | Bound |
@@ -167,12 +268,17 @@ window unchanged. Pair pressure is visible through `colorinfo` and
 | Rectangles per call | 2,048, expanded into two triangles each |
 | Sum of clipped bounding-box pixel visits per batch | 16,777,216 |
 | Owned raster storage across all surfaces | 8 MiB |
+| Aggregate RGB plan | 32 surfaces, 262,144 half-block cells |
 
 Owned storage includes structures, names, palette/pair tables and pixel/depth
 buffers. Resize also checks old plus new buffers against that limit before
 allocating. Per-call temporary storage is separately bounded by the triangle
 limit (one parsed record per triangle), cell count (one packed rectangle and a
 1,024-entry cell cache), or readback limit (two formatted values per pixel).
+RGB surfaces add one unsigned integer per pixel (four bytes on tested builds).
+Resolve requires only the new surface and fixed local accumulators. RGB pair
+planning additionally uses 16 bytes of canonical name plus one pointer per cell,
+up to 6 MiB on a 64-bit build; per-blit plans are limited to 32,768 cells.
 Shell argument/parameter memory and curses-owned cells/color pairs are additional.
 `resourceinfo` adds `raster_surfaces`, `raster_bytes`, and `raster_byte_limit`.
 

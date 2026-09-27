@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def trial(shell, modules, fixture, repetitions, backend, mode, width, height,
-          script='raster.zsh',
+          script='raster.zsh', terminal_name=None,
           phase_names=('split_ms', 'clear_ms', 'raster_ms', 'pack_ms', 'present_ms', 'total_ms')):
     read_fd, write_fd = os.pipe()
     os.set_inheritable(write_fd, True)
@@ -31,7 +31,7 @@ def trial(shell, modules, fixture, repetitions, backend, mode, width, height,
         os.close(read_fd)
         fcntl.ioctl(0, termios.TIOCSWINSZ,
                     struct.pack('HHHH', max(24, (height+1)//2), max(80, width), 0, 0))
-        os.environ.update(TERM='vt100' if mode == 'mono' else 'xterm-256color',
+        os.environ.update(TERM=terminal_name or ('vt100' if mode == 'mono' else 'xterm-256color'),
                           LC_ALL=os.environ.get('ZDRAW_TEST_LOCALE', 'C.UTF-8'))
         os.environ.pop('LINES', None)
         os.environ.pop('COLUMNS', None)
