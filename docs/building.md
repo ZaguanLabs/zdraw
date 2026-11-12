@@ -67,6 +67,24 @@ No installation, administrator access, or changes to the supplied tree are neede
 The tests create their own pseudo-terminal, so they also run without an
 interactive terminal. `make build` builds without running tests.
 
+Configuration tests whether `delscreen()` preserves windows belonging to other
+screens. The probe uses temporary streams and the `dumb` terminfo entry without
+an interactive terminal. It checks behavior rather than version numbers so
+distribution backports are recognized. Cross builds conservatively assume this
+behavior is unavailable; `zdraw_cv_delscreen_preserves_screens=yes` may be supplied
+only after verifying the target library.
+
+Some ncurses snapshots starting with 20220813 delete other screens' windows
+during `delscreen()`. Upstream corrected this on
+[20230923](https://github.com/ThomasDickey/ncurses-snapshots/blob/v6_4_20230923/NEWS).
+The issue reproduces with ncurses 6.3.20221203. On an affected or unverified build,
+`zdraw init` returns 1 with a diagnostic if another curses user retains a screen,
+including after `zcurses end`. Running zdraw alone remains supported. Run it in
+a separate process or build against fixed/backported ncurses to combine owners
+in one process; unloading a module does not guarantee that its library releases
+the screen. Initialization is rejected before creating a zdraw screen, so the
+foreign windows remain usable and no deferred screen allocation is leaked.
+
 An extracted release needs no prior configuration. Standard compiler environment
 variables such as `CC`, `CPPFLAGS`, `CFLAGS`, and `LDFLAGS` can be set before the
 first build, including paths to curses installed in a nonstandard location.

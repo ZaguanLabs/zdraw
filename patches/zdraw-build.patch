@@ -10,6 +10,45 @@
 +	       newterm delscreen set_curterm init_extended_pair extended_color_content \
  	       tgetent tigetflag tigetnum tigetstr setupterm initscr resize_term \
  	       getcchar setcchar waddwstr wget_wch win_wch use_default_colors \
+@@ -1637,1 +1642,38 @@
+ AC_SUBST(ZSH_CURSES_H)
++
++AC_CACHE_CHECK([whether delscreen preserves other screens],
++  [zdraw_cv_delscreen_preserves_screens],
++  [if test x$zsh_cv_path_curses_header != xnone &&
++      test x$ac_cv_func_newterm = xyes && test x$ac_cv_func_delscreen = xyes; then
++    AC_RUN_IFELSE([AC_LANG_PROGRAM([[
++#include <stdio.h>
++#include <$zsh_cv_path_curses_header>
++]], [[
++    FILE *output = tmpfile(), *input = tmpfile();
++    SCREEN *first, *second;
++    WINDOW *saved;
++    int result;
++    if (!output || !input) return 1;
++    first = newterm("dumb", output, input);
++    if (!first) return 1;
++    saved = stdscr;
++    second = newterm("dumb", output, input);
++    if (!second) return 1;
++    delscreen(second);
++    set_term(first);
++    result = (stdscr == saved) ? 0 : 1;
++    delscreen(first);
++    fclose(input);
++    fclose(output);
++    return result;
++]])], [zdraw_cv_delscreen_preserves_screens=yes],
++      [zdraw_cv_delscreen_preserves_screens=no],
++      [zdraw_cv_delscreen_preserves_screens=no])
++  else
++    zdraw_cv_delscreen_preserves_screens=no
++  fi])
++AH_TEMPLATE([HAVE_ZDRAW_SAFE_DELSCREEN],
++[Define to 1 if delscreen preserves windows belonging to other screens.])
++if test x$zdraw_cv_delscreen_preserves_screens = xyes; then
++  AC_DEFINE(HAVE_ZDRAW_SAFE_DELSCREEN)
++fi
 --- a/Doc/Makefile.in
 +++ b/Doc/Makefile.in
 @@ -74,5 +74,5 @@
