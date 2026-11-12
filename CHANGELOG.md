@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Probe whether curses can delete one screen without freeing another screen's
+  windows. On affected ncurses builds, reject `zdraw init` while another screen
+  is retained, before allocating a screen or changing the other owner's windows.
+  Fixed and backported libraries retain screen coexistence; use a separate
+  process or a fixed ncurses build on affected systems.
+
 ## 0.1.3 — 2026-09-27
 
 - Add experimental RGB raster materials and affine per-vertex RGB interpolation,

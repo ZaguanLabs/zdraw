@@ -10,16 +10,27 @@ check() { "$@" || fail "$*"; }
 reject() { "$@" 2>/dev/null && fail "unexpected success: $*"; return 0; }
 # Pin the stock module while it is inactive: this also exercises the host
 # configuration where libncurses remains resident across zdraw unloads.
-if [[ $mode == stock ]]; then
+if [[ $mode == stock || $mode == stock_guarded ]]; then
   check zmodload zsh/curses
   repeat 3; do
     check zcurses init
     check zcurses attr stdscr blue/black
     check zcurses string stdscr stock
     check zcurses end
-    check zdraw init
-    check zdraw spans stdscr 0 0 red/black zdraw
-    check zdraw end
+    if [[ $mode == stock_guarded ]]; then
+      zdraw init && fail 'unsafe foreign-screen initialization succeeded'
+      (( $? == 1 && ${#zdraw_windows} == 0 )) || fail 'guard changed zdraw state'
+      # Rejection must preserve the actual foreign WINDOWs, not just avoid a
+      # crash. Exercise them again before and after zdraw unload/reload.
+      check zcurses init
+      check zcurses attr stdscr red/black
+      check zcurses string stdscr preserved
+      check zcurses end
+    else
+      check zdraw init
+      check zdraw spans stdscr 0 0 red/black zdraw
+      check zdraw end
+    fi
     check zmodload -u zdraw
     check zmodload zdraw
   done

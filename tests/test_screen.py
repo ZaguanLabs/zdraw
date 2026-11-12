@@ -29,7 +29,24 @@ class ScreenTests(unittest.TestCase):
             suffix = next(modules.glob('zdraw.*')).suffix
             shutil.copy2(root / f'.build/zsh/Src/Modules/curses{suffix}',
                          modules / f'zsh/curses{suffix}')
-            drawing_session(self, 'stock', modules, fixture='screen.zsh', marker=b'SCREEN PASS')
+            config = (test_features.BUILD / 'config.h').read_text().splitlines()
+            safe = '#define HAVE_ZDRAW_SAFE_DELSCREEN 1' in config
+            mode = 'stock' if safe else 'stock_guarded'
+            with self.subTest(delscreen_preserves_other_screens=safe):
+                drawing_session(self, mode, modules, fixture='screen.zsh', marker=b'SCREEN PASS')
+
+    def test_rejects_unsafe_foreign_screen_teardown(self):
+        root = test_features.ROOT
+        source = (root / 'Src/Modules/zdraw.c').read_text()
+        source = source.replace('#include <stdio.h>',
+                                '#include <stdio.h>\n#undef HAVE_ZDRAW_SAFE_DELSCREEN', 1)
+        with tempfile.TemporaryDirectory(dir=root / '.build') as tmp:
+            modules = test_features.FeatureTests().variant(tmp, source)
+            (modules / 'zsh').mkdir()
+            suffix = next(modules.glob('zdraw.*')).suffix
+            shutil.copy2(root / f'.build/zsh/Src/Modules/curses{suffix}',
+                         modules / f'zsh/curses{suffix}')
+            drawing_session(self, 'stock_guarded', modules, fixture='screen.zsh', marker=b'SCREEN PASS')
 
     def test_failed_screen_initialization(self):
         source = (test_features.ROOT / 'Src/Modules/zdraw.c').read_text()

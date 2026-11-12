@@ -6490,6 +6490,17 @@ zdraw_screen_init(void)
     zdraw_previous_screen = set_term(NULL);
     set_term(zdraw_previous_screen);
     set_curterm(zdraw_previous_terminal);
+#  ifndef HAVE_ZDRAW_SAFE_DELSCREEN
+    /* Some ncurses builds delete other screens' windows in delscreen().
+     * Refuse before allocating our SCREEN; reordering set_term() cannot
+     * preserve windows which the library has already freed. */
+    if (zdraw_previous_screen) {
+        zdraw_previous_screen = NULL;
+        zdraw_previous_terminal = NULL;
+        zwarnnam("zdraw", "cannot preserve another curses screen with this library; use fixed ncurses or a separate process");
+        return NULL;
+    }
+#  endif
 # endif
     zdraw_screen = newterm(NULL, stdout, stdin);
     if (!zdraw_screen) {

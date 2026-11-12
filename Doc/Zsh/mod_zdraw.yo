@@ -8,6 +8,13 @@ The stock tt(zsh/curses) module remains separate; no tt(zcurses) aliases are
 registered. Use only one active curses owner in a process, ending and unloading
 it before switching modules.
 
+On curses builds whose tt(delscreen()) cannot preserve another screen's windows,
+tt(zdraw init) returns status 1 with a diagnostic when a foreign screen remains,
+including an inactive screen retained after tt(zcurses end). Configuration probes
+this behavior; fixed and backported libraries retain normal coexistence support.
+Use a separate process or fixed ncurses on affected builds. The rejected
+initialization leaves the foreign screen usable and allocates no zdraw screen.
+
 subsect(Builtin)
 
 startitem()
