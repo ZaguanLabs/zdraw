@@ -2,3 +2,6 @@
 .atlas/
 .build/
 __pycache__/
+
+# Bit Lantern local data
+.bitlantern/
