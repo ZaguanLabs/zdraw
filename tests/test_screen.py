@@ -48,6 +48,19 @@ class ScreenTests(unittest.TestCase):
                          modules / f'zsh/curses{suffix}')
             drawing_session(self, 'stock_guarded', modules, fixture='screen.zsh', marker=b'SCREEN PASS')
 
+    def test_seeded_stock_screen_lifecycle(self):
+        root = test_features.ROOT
+        with tempfile.TemporaryDirectory(dir=root / '.build') as tmp:
+            modules = Path(tmp) / 'modules'
+            shutil.copytree(root / '.build/modules', modules)
+            suffix = next(modules.glob('zdraw.*')).suffix
+            shutil.copy2(root / f'.build/zsh/Src/Modules/curses{suffix}', modules / 'zsh')
+            config = (test_features.BUILD / 'config.h').read_text().splitlines()
+            drawing_session(self, 'stock', modules, fixture='lifecycle-stress.zsh',
+                            env={'ZDRAW_STRESS_CYCLES': '40', 'ZDRAW_STRESS_SEED': '20261113',
+                                 'ZDRAW_STRESS_GUARDED': str(int('#define HAVE_ZDRAW_SAFE_DELSCREEN 1' not in config))},
+                            marker=b'LIFECYCLE STRESS PASS')
+
     def test_failed_screen_initialization(self):
         source = (test_features.ROOT / 'Src/Modules/zdraw.c').read_text()
         source = source.replace('#include <stdio.h>',

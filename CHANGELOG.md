@@ -1,12 +1,32 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-11-13
 
+- Reduce companion style-resolution overhead while preserving conditional
+  precedence, theme mutations and validation of inactive utilities. The measured
+  large form/document workloads use 12–15% less work time, and charts 11–17%
+  less, with identical cells, terminal bytes and resource counts. See the
+  [performance and reliability report](benchmarks/performance-2026-11-13.md).
 - Probe whether curses can delete one screen without freeing another screen's
   windows. On affected ncurses builds, reject `zdraw init` while another screen
   is retained, before allocating a screen or changing the other owner's windows.
   Fixed and backported libraries retain screen coexistence; use a separate
   process or a fixed ncurses build on affected systems.
+- Add seeded lifecycle regressions, stock-curses and style comparisons, full
+  leak-check tooling, prepared-row amortization measurements and controlled
+  input/presentation latency probes. Memory investigations use private shell and
+  module copies so later builds cannot overwrite a loaded test module.
+
+Validation: 193 tests passed without skips with matching Zsh 5.9.2. The changed
+Zsh files also passed syntax checks on Zsh 5.8, alongside its headless style and
+diagnostics fixtures. The investigation includes 2,000 style comparisons,
+600 stock-curses operations, 2,000 lifecycle cycles and 800 ordered input events.
+Memcheck reported no errors or definite/indirect leaks; stock coexistence retained
+712 bytes classified as possibly lost in libtinfo at both 100 and 200 cycles.
+
+When upgrading an existing checkout, run `make clean` before rebuilding: the
+configure integration patch has changed. Use the matching shell/module setup in
+the [build guide](docs/building.md).
 
 ## 0.1.3 — 2026-09-27
 

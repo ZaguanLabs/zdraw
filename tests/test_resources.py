@@ -34,3 +34,8 @@ class ResourceTests(unittest.TestCase):
 
     def test_lifecycle(self):
         drawing_session(self, 'wide', fixture='resources.zsh', marker=b'RESOURCES PASS')
+
+    def test_seeded_lifecycle_stress(self):
+        drawing_session(self, 'standalone', fixture='lifecycle-stress.zsh',
+                        env={'ZDRAW_STRESS_CYCLES': '40', 'ZDRAW_STRESS_SEED': '20261113'},
+                        marker=b'LIFECYCLE STRESS PASS')

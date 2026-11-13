@@ -1,5 +1,11 @@
 # Performance benchmarks
 
+The [2026-11-13 performance and reliability sweep](performance-2026-11-13.md)
+records a further style-resolution improvement, lifecycle stress with leak
+checking, generated compatibility comparisons, prepared-row break-even costs,
+and input-to-presentation latency under controlled output pressure. Its commands
+use the existing toolkit and matching public-source shell builds.
+
 The [2026-09-12 profiling sweep](performance-2026-09-12.md) records native and
 component improvements, exact-output comparisons, profiling evidence and
 commands for reproducing the measurements. `native.py` and `components.py`

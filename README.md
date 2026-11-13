@@ -1,6 +1,6 @@
 # zdraw
 
-**Version: 0.1.3** · [Release notes](CHANGELOG.md)
+**Version: 0.1.4** · [Release notes](CHANGELOG.md)
 
 Build text-and-cell terminal interfaces in Zsh: styled panels, scrolling lists
 and tables, editable forms, and responsive layouts. Choose the companion

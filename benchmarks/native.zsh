@@ -4,7 +4,7 @@ emulate -R zsh
 setopt errexit nounset
 module_path=("$1")
 typeset workload=$2 report_fd=$4 text key
-typeset -i iterations=$3 i
+typeset -i iterations=$3 i reuse=0 draw_index generation=0
 typeset -A result
 typeset -F 9 SECONDS elapsed
 zmodload zdraw
@@ -19,6 +19,7 @@ zdraw init
   esac
   zdraw attr sample red/black blue/black default/default
   zdraw prepare ready bold,red/black abcdefghijklmnop
+  [[ $workload != reuse-* ]] || reuse=${workload##*-}
   case $workload in
     lookup)
       for (( i=0; i<256; i++ )); do zdraw addwin "w$i" 1 1 0 0; done ;;
@@ -29,6 +30,22 @@ zdraw init
   esac
   function work {
     case $workload in
+      reuse-*)
+        # Charge preparation and disposal to every group. The row changes
+        # between groups; both backends draw the same text the same number of times.
+        generation=$((1-generation))
+        text="${generation}${(pl:63::abcdefgh:):-}"
+        if [[ $workload == reuse-prepared-* ]]; then
+          zdraw prepare temporary bold,red/black "$text"
+          for (( draw_index=0; draw_index<reuse; draw_index++ )); do
+            zdraw draw sample 0 0 temporary
+          done
+          zdraw unprepare temporary
+        else
+          for (( draw_index=0; draw_index<reuse; draw_index++ )); do
+            zdraw spans sample 0 0 bold,red/black "$text"
+          done
+        fi ;;
       textinfo*) zdraw textinfo result "$text" 32 ;;
       textpos*) zdraw textpos result "$text" column 12 ;;
       grapheme*) zdraw textinfo result "$text" 32 grapheme ;;

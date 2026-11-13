@@ -87,12 +87,14 @@ test: build
 	"$(ZSH_BIN)" -dfn tests/unicode-draw.zsh
 	"$(ZSH_BIN)" -dfn scripts/portability/unicode-source.zsh
 	"$(ZSH_BIN)" -dfn tests/resources.zsh
+	"$(ZSH_BIN)" -dfn tests/lifecycle-stress.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/components.zsh
 	"$(ZSH_BIN)" -dfn tests/prepared.zsh
 	"$(ZSH_BIN)" -dfn tests/clipping.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/spans.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/fill.zsh
 	"$(ZSH_BIN)" -dfn benchmarks/native.zsh
+	"$(ZSH_BIN)" -dfn benchmarks/latency.zsh
 	"$(ZSH_BIN)" -dfn tests/performance.zsh
 	"$(ZSH_BIN)" -dfn examples/events.zsh
 	"$(ZSH_BIN)" -dfn examples/streams.zsh

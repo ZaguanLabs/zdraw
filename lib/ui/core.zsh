@@ -102,49 +102,14 @@ function zdraw-ui-theme {
   zdraw_ui_theme=("${(@kv)_zui_theme}")
 }
 
-# Applies one validated property to the resolver's local association.
-function _zdraw_ui_property {
-  emulate -L zsh
-  local _zui_key=${1%%=*} _zui_value=${1#*=}
-  case $1 in
-    bold|underline|reverse) _zui_resolved[$1]=1; return 0 ;;
-    no-bold|no-underline|no-reverse) _zui_resolved[${1#no-}]=0; return 0 ;;
-  esac
-  [[ $1 == *=* ]] || { _zdraw_ui_error 1 "${(%):-%N}" "expected a style utility, got ${(qqq)1}"; return $?; }
-  case $_zui_key in
-    fg|bg|border-fg)
-      case $_zui_value in
-        canvas|surface|text|muted|accent|border|selection|on-selection|inactive|on-inactive|error)
-          [[ ${(t)zdraw_ui_theme} == association* ]] || { _zdraw_ui_error 1 "${(%):-%N}" "color tokens require a zdraw_ui_theme association"; return $?; }
-          _zui_value=${zdraw_ui_theme[$_zui_value]-} ;;
-      esac
-      _zdraw_ui_color "$_zui_value" || { _zdraw_ui_error 1 "${(%):-%N}" "invalid color ${(qqq)_zui_value} in ${(qqq)1}"; return $?; }
-      [[ $_zui_value == <-> ]] && _zui_value=$(( 10#$_zui_value ))
-      _zui_value=${(L)_zui_value}
-      if [[ ${(t)zdraw_ui_theme} == association* && -n ${zdraw_ui_theme[color-profile]-} ]]; then
-        local -A zdraw_color=(profile "$zdraw_ui_theme[color-profile]"
-          encoding "${zdraw_ui_theme[color-encoding]-}" rgb_min "${zdraw_ui_theme[rgb-min]-}")
-        local REPLY
-        zdraw-color "$_zui_value" || return
-        _zui_value=$REPLY
-      fi ;;
-    px|py)
-      [[ $_zui_value == <-> && ${#_zui_value} -le 2 ]] || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be an integer from 0 to 16, got ${(qqq)1}"; return $?; }
-      (( 10#$_zui_value <= 16 )) || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be from 0 to 16, got ${(qqq)1}"; return $?; }
-      _zui_value=$(( 10#$_zui_value )) ;;
-    border) [[ $_zui_value == (none|ascii|rounded|double) ]] || { _zdraw_ui_error 1 "${(%):-%N}" "unknown border ${(qqq)_zui_value}; expected none, ascii, rounded or double"; return $?; } ;;
-    align) [[ $_zui_value == (left|center|right) ]] || { _zdraw_ui_error 1 "${(%):-%N}" "unknown alignment ${(qqq)_zui_value}; expected left, center or right"; return $?; } ;;
-    *) { _zdraw_ui_error 1 "${(%):-%N}" "unknown style property ${(qqq)_zui_key}"; return $?; } ;;
-  esac
-  _zui_resolved[$_zui_key]=$_zui_value
-}
-
 function zdraw-ui-style {
   emulate -L zsh
   [[ ${(t)zdraw_ui_style} == (association|association-local) && $# -ge 1 && $# -le 129 ]] || { _zdraw_ui_error 1 "${(%):-%N}" "requires a writable zdraw_ui_style association, states and at most 128 utilities"; return $?; }
   local -a _zui_states=("${(@s:,:)1}") _zui_conditions
   local -A _zui_base _zui_variants
-  local _zui_token _zui_condition _zui_property _zui_flag _zui_key _zui_style=''
+  local _zui_token _zui_condition _zui_property _zui_flag _zui_key _zui_value _zui_style=''
+  local REPLY
+  local -A zdraw_color
   local -i _zui_match
   local -A _zui_resolved
   for _zui_flag in "${_zui_states[@]}"; do
@@ -156,6 +121,7 @@ function zdraw-ui-style {
   # utility is parsed once. Last assignment wins within each precedence tier.
   for _zui_token in "$@"; do
     (( ${#_zui_token} <= 128 )) || { _zdraw_ui_error 1 "${(%):-%N}" "style utility exceeds 128 characters"; return $?; }
+    _zui_condition='' _zui_property=$_zui_token
     if [[ $_zui_token == *:* ]]; then
       _zui_condition=${_zui_token%%:*} _zui_property=${_zui_token#*:}
       _zui_conditions=("${(@s:+:)_zui_condition}")
@@ -165,13 +131,45 @@ function zdraw-ui-style {
         [[ $_zui_flag == (normal|focus|selected|inactive|disabled|empty|title|header|alternate|filled|track|label|key|invalid|cursor|heading|subheading|paragraph|bullet|quote|code|separator|spacer|positive|negative|axis|missing|clipped) ]] || { _zdraw_ui_error 1 "${(%):-%N}" "unknown condition ${(qqq)_zui_flag} in ${(qqq)_zui_token}"; return $?; }
         (( ${_zui_states[(Ie)$_zui_flag]} )) || _zui_match=0
       done
-      _zdraw_ui_property "$_zui_property" || return 1
-      _zui_key=${_zui_property%%=*} _zui_key=${_zui_key#no-}
-      (( _zui_match )) && _zui_variants[$_zui_key]=$_zui_resolved[$_zui_key]
-    else
-      _zdraw_ui_property "$_zui_token" || return 1
-      _zui_key=${_zui_token%%=*} _zui_key=${_zui_key#no-}
-      _zui_base[$_zui_key]=$_zui_resolved[$_zui_key]
+    fi
+    # Normalize directly into the appropriate precedence tier. Keeping this
+    # inside the resolver avoids a function/options scope and a scratch hash
+    # assignment for every utility; inactive variants still take this path.
+    _zui_key=${_zui_property%%=*} _zui_value=${_zui_property#*=}
+    case $_zui_property in
+      bold|underline|reverse) _zui_value=1 ;;
+      no-bold|no-underline|no-reverse) _zui_key=${_zui_property#no-} _zui_value=0 ;;
+      *)
+        [[ $_zui_property == *=* ]] || { _zdraw_ui_error 1 "${(%):-%N}" "expected a style utility, got ${(qqq)_zui_property}"; return $?; }
+        case $_zui_key in
+          fg|bg|border-fg)
+            case $_zui_value in
+              canvas|surface|text|muted|accent|border|selection|on-selection|inactive|on-inactive|error)
+                [[ ${(t)zdraw_ui_theme} == association* ]] || { _zdraw_ui_error 1 "${(%):-%N}" "color tokens require a zdraw_ui_theme association"; return $?; }
+                _zui_value=${zdraw_ui_theme[$_zui_value]-} ;;
+            esac
+            _zdraw_ui_color "$_zui_value" || { _zdraw_ui_error 1 "${(%):-%N}" "invalid color ${(qqq)_zui_value} in ${(qqq)_zui_property}"; return $?; }
+            [[ $_zui_value == <-> ]] && _zui_value=$(( 10#$_zui_value ))
+            _zui_value=${(L)_zui_value}
+            if [[ ${(t)zdraw_ui_theme} == association* && -n ${zdraw_ui_theme[color-profile]-} ]]; then
+              zdraw_color=(profile "$zdraw_ui_theme[color-profile]"
+                encoding "${zdraw_ui_theme[color-encoding]-}" rgb_min "${zdraw_ui_theme[rgb-min]-}")
+              zdraw-color "$_zui_value" || return 1
+              _zui_value=$REPLY
+            fi ;;
+          px|py)
+            [[ $_zui_value == <-> && ${#_zui_value} -le 2 ]] || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be an integer from 0 to 16, got ${(qqq)_zui_property}"; return $?; }
+            (( 10#$_zui_value <= 16 )) || { _zdraw_ui_error 1 "${(%):-%N}" "padding must be from 0 to 16, got ${(qqq)_zui_property}"; return $?; }
+            _zui_value=$(( 10#$_zui_value )) ;;
+          border) [[ $_zui_value == (none|ascii|rounded|double) ]] || { _zdraw_ui_error 1 "${(%):-%N}" "unknown border ${(qqq)_zui_value}; expected none, ascii, rounded or double"; return $?; } ;;
+          align) [[ $_zui_value == (left|center|right) ]] || { _zdraw_ui_error 1 "${(%):-%N}" "unknown alignment ${(qqq)_zui_value}; expected left, center or right"; return $?; } ;;
+          *) { _zdraw_ui_error 1 "${(%):-%N}" "unknown style property ${(qqq)_zui_key}"; return $?; } ;;
+        esac ;;
+    esac
+    if [[ -z $_zui_condition ]]; then
+      _zui_base[$_zui_key]=$_zui_value
+    elif (( _zui_match )); then
+      _zui_variants[$_zui_key]=$_zui_value
     fi
   done
   _zui_resolved=(fg default bg default border-fg default
